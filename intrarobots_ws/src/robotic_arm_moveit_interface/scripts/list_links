@@ -1,0 +1,13 @@
+import rospy
+from xml.dom import minidom
+
+def main():
+    robot_description = rospy.get_param("/robot_description")
+    urdf_dom = minidom.parseString(robot_description)
+    links = urdf_dom.getElementsByTagName("link")
+    for link in links:
+        print(link.getAttribute("name"))
+
+if __name__ == '__main__':
+    rospy.init_node('list_links')
+    main()

@@ -5,4 +5,4 @@ Description: Description of robotic_arm_moveit_interface
 Version: 0.0.0
 Cflags: 
 Libs: -L${prefix}/lib 
-Requires: 
+Requires: geometry_msgs message_generation moveit_commander moveit_ros_planning_interface moveit_visual_tools roscpp rospy std_msgs tf message_runtime

@@ -1,0 +1,13 @@
+(cl:defpackage robotic_arm_moveit_interface-msg
+  (:use )
+  (:export
+   "<GO_TO_POSE_COMMAND>"
+   "GO_TO_POSE_COMMAND"
+   "<GO_TO_POSE_CONFIRMATION>"
+   "GO_TO_POSE_CONFIRMATION"
+   "<MOVE_GRIPPER_COMMAND>"
+   "MOVE_GRIPPER_COMMAND"
+   "<MOVE_GRIPPER_CONFIRMATION>"
+   "MOVE_GRIPPER_CONFIRMATION"
+  ))
+

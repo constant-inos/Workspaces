@@ -177,7 +177,7 @@ foreach(library ${libraries})
   endif()
 endforeach()
 
-set(robotic_arm_moveit_interface_EXPORTED_TARGETS "")
+set(robotic_arm_moveit_interface_EXPORTED_TARGETS "robotic_arm_moveit_interface_generate_messages_cpp;robotic_arm_moveit_interface_generate_messages_eus;robotic_arm_moveit_interface_generate_messages_lisp;robotic_arm_moveit_interface_generate_messages_nodejs;robotic_arm_moveit_interface_generate_messages_py")
 # create dummy targets for exported code generation targets to make life of users easier
 foreach(t ${robotic_arm_moveit_interface_EXPORTED_TARGETS})
   if(NOT TARGET ${t})
@@ -185,7 +185,7 @@ foreach(t ${robotic_arm_moveit_interface_EXPORTED_TARGETS})
   endif()
 endforeach()
 
-set(depends "")
+set(depends "geometry_msgs;message_generation;moveit_commander;moveit_ros_planning_interface;moveit_visual_tools;roscpp;rospy;std_msgs;tf;message_runtime")
 foreach(depend ${depends})
   string(REPLACE " " ";" depend_list ${depend})
   # the package name of the dependency must be kept in a unique variable so that it is not overwritten in recursive calls
@@ -214,7 +214,7 @@ foreach(depend ${depends})
   _list_append_deduplicate(robotic_arm_moveit_interface_EXPORTED_TARGETS ${${robotic_arm_moveit_interface_dep}_EXPORTED_TARGETS})
 endforeach()
 
-set(pkg_cfg_extras "")
+set(pkg_cfg_extras "robotic_arm_moveit_interface-msg-extras.cmake")
 foreach(extra ${pkg_cfg_extras})
   if(NOT IS_ABSOLUTE ${extra})
     set(extra ${robotic_arm_moveit_interface_DIR}/${extra})

@@ -23,6 +23,8 @@ from sensor_msgs.msg import LaserScan
 from std_msgs.msg import String
 from std_msgs.msg import Float64
 import socket, pickle
+from custom_messages.msg import *
+
 
 def all_close(goal, actual, tolerance):
   """
@@ -49,8 +51,6 @@ def all_close(goal, actual, tolerance):
 class Controller(object):
 
   def __init__(self):
-    # super(MoveGroupPythonIntefaceTutorial, self).__init__()
-    ## First initialize `moveit_commander`_ and a `rospy`_ node:
     moveit_commander.roscpp_initialize(sys.argv)
     rospy.init_node('moveit_python_interface')
     ## Get the name of the robot - this will be used to properly define the end-effector link when adding a box
@@ -64,22 +64,19 @@ class Controller(object):
     print(self.pose_goal)
 
 
-    #self.ee_gripper_link=rospy.get_param("~ee_gripper_link")
-    #print(rospy.get_param(""))
-
     ## Instantiate a `RobotCommander`_ object. This object is the outer-level interface to the robot:
     self.robot = moveit_commander.RobotCommander()
+    print("="*50)
+    for group in self.robot.get_group_names():
+      print(group)
+      try:
+        print("End Effector Link:",group.get_end_effector_link())
+      except  Exception as e:
+        print(e)
 
     ## Instantiate a `PlanningSceneInterface`_ object.  This object is an interface to the world surrounding the robot:
     self.scene = moveit_commander.PlanningSceneInterface()
 
-    ## Instantiate a `MoveGroupCommander`_ object.  This object is an interface
-    ## to one group of joints.  In this case the group is the joints in the Interbotix
-    ## arm so we set ``group_name = interbotix_arm``. If you are using a different robot,
-    ## you should change this value to the name of your robot arm planning group.
-    ## This interface can be used to plan and execute motions on the Interbotix Arm:
-    # group_name = "interbotix_arm"
-    # group_name2 = "interbotix_gripper"
     group_name = "panda_manipulator"
     group_name2 = "panda_hand"
     self.group = moveit_commander.MoveGroupCommander(group_name)
@@ -91,6 +88,7 @@ class Controller(object):
                                                    moveit_msgs.msg.DisplayTrajectory,
                                                    queue_size=20)
 
+
     ## Getting Basic Information
     # We can get the name of the reference frame for this robot:
     self.planning_frame = self.group.get_planning_frame()
@@ -99,8 +97,11 @@ class Controller(object):
     # We can get a list of all the groups in the robot:
     self.group_names = self.robot.get_group_names()
 
-    # self.go_to_pose_goal()
-    # self.go_to_joint_goal()
+    self.go_to_pose_confirmation = rospy.Publisher("/"+self.robot_name+"/go_to_pose_confirmation",GoToPoseConfirmation,queue_size=1)
+    self.move_gripper_confirmation = rospy.Publisher("/"+self.robot_name+"/go_to_pose_confirmation",MoveGripperConfirmation,queue_size=1)
+
+
+    
 
 
 
@@ -162,17 +163,24 @@ class Controller(object):
 
       return success
 
-  def move_gripper(self, gripper_position):
-    # gripper: left_finger, right_finger
-    #self.group2.set_joint_value_target([0.018, -0.016]) #almost closed
-    #self.group2.set_joint_value_target([0.034, -0.034]) #almost totally open
+  def move_gripper(self, msg):
+    gripper_upper_limit = [0.03,0.03]
+    gripper_lower_limit = [0,0]
+
+    if msg.cmd == "open":
+      gripper_position = gripper_upper_limit
+    else:
+      gripper_position = gripper_lower_limit
+
     self.group2.set_joint_value_target(gripper_position)
     self.group2.go()
-    # plan = self.group2.plan()[1]
-    # self.group2.execute(plan, wait=True)
 
-    msg = ["move_gripper attempt",self.check_gripper_state()]
-    send_socket_msg(msg,port=9989)
+    msg_n = MoveGripperConfirmation()
+    msg_n.robot_name = 'panda'
+    msg_n.command_seq = msg.header.seq
+    msg_n.success = True
+    self.move_gripper_confirmation.publish(msg_n)
+
 
   def check_gripper_state(self,send_result=False):
     cur_gripper_position = self.group2.get_current_joint_values()
@@ -264,6 +272,8 @@ def main():
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("localhost", 9988))
+
+    sub = rospy.Subscriber("/"+controller.robot_name+"/move_gripper_command", MoveGripperCommand, controller.move_gripper) 
 
     while True:
         try:
