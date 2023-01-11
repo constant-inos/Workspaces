@@ -12,68 +12,108 @@ import math
 import cv2
 from cv_bridge import CvBridge
 import random
+from tf.transformations import quaternion_from_euler
 from custom_messages.msg import *
 
 bridge = CvBridge()
-sub=0
-sub2 = 0
 exev_status_code = 0
 exev_status_text = ''
 ROBOT_NAME = 'panda'
 
-sent_commands = []
-
-
 go_to_pose_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/go_to_pose_command",GoToPoseCommand,queue_size=1)
 move_gripper_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/move_gripper_command",MoveGripperCommand,queue_size=1)
 
+def create_pose_msg(pose_goal_raw):
+    quat = quaternion_from_euler(pose_goal_raw[3], pose_goal_raw[4], pose_goal_raw[5])
+    pose = geometry_msgs.msg.Pose()
+    pose.position.x = pose_goal_raw[0]
+    pose.position.y = pose_goal_raw[1]
+    pose.position.z = pose_goal_raw[2]
+    pose.orientation.x = quat[0]
+    pose.orientation.y = quat[1]
+    pose.orientation.z = quat[2]
+    pose.orientation.w = quat[3]
+    return pose
 
-def move_to_specified_pose(value,orientation='standard'):
+def move_to_specified_pose(value):
+
+    print("Moving to Specified Pose")
+
     x,y,z = value
     theta = get_gripper_angle(x,y)
-    pose = [x,y,z,0.0,np.pi,theta]
+    pose_euler = [x,y,z,0.0,np.pi,theta]
+    pose_quat = create_pose_msg(pose_euler)
+    
+    msg = GoToPoseCommand()
+    msg.robot_name = ROBOT_NAME
+    msg.target_pose = pose_quat
+    uid = str(type(msg))+'-'+str(msg.header.seq)
+    msg.command_id = uid
+    go_to_pose_command_publisher.publish(msg)
 
-    arr=["move_to_specified_pose",pose]
-    send_socket_msg(arr)
-
-    msg = []
-    while not msg:
-        msg = receive_socket_msg('go_to_defined_pose attempt')
-
-    print('EXECUTION:',msg[2])
-    if msg[2] == 'success':
-        return True
-    if msg[2] == 'fail':
-        return False
+    result = await_command_completion(uid)
+    
+    if result == 'SUCCESS':
+        print("Moved to specified pose successfully")
+    
+    return
 
 def control_motor_angles(value):
     arr=[]
     arr.append("control_motor_angles")
     arr.append(value)
-    send_socket_msg(arr)
-
+    # send_socket_msg(arr)
 
 def open_gripper():
-    if len(sent_commands)>0: 
-        print("waiting for othet command completion")
-        return
+    print("Opening Gripper")
     msg = MoveGripperCommand()
     msg.robot_name = ROBOT_NAME
-    msg.cmd = 'open'
+    msg.command = 'open'
+    uid = str(type(msg))+'-'+str(msg.header.seq)
+    msg.command_id = uid
     move_gripper_command_publisher.publish(msg)
-    sent_commands.append([msg.header.seq])
+
+    result = await_command_completion(uid)
+    
+    if result == 'SUCCESS':
+        print("Gripper Opened Successfully")
+    
+    return
 
 def close_gripper():
-    if len(sent_commands)>0: 
-        print("waiting for othet command completion")
-        return
+    print("Closing Gripper")
     msg = MoveGripperCommand()
     msg.robot_name = 'panda'
-    msg.cmd = 'close'
+    msg.command = 'close'
+    uid = str(type(msg))+'-'+str(msg.header.seq)
+    msg.command_id = uid
     move_gripper_command_publisher.publish(msg)
-    sent_commands.append([msg.header.seq])
+    
+    result = await_command_completion(uid)
+    
+    if result == 'SUCCESS':
+        print("Gripper Closed Successfully")
 
+    return
 
+def await_command_completion(uid):
+    rospy.set_param('/command/uid',uid)
+    rospy.set_param('/command/received',False)
+    rospy.set_param('/command/completed',False)
+    rospy.set_param('/command/success',False)
+
+    while True:
+        received = rospy.get_param('/command/received')
+        completed = rospy.get_param('/command/completed')
+        success = rospy.get_param('/command/success')
+
+        if not received:
+            continue
+        if completed and success:
+            return('SUCCESS')
+        if completed and not success:
+            return('FAILED')
+        
 def ranges_to_polar(ranges,object_r=0.025,angle_inc=0.031733):
     ranges = list(ranges)
     cut_ranges = []
@@ -88,8 +128,6 @@ def ranges_to_polar(ranges,object_r=0.025,angle_inc=0.031733):
     d = np.mean(cut_ranges[:3]) + object_r
     theta = np.mean(index_cut_ranges)*angle_inc
     return (d,theta)
-
-
 
 def get_objects_position(cv_image):
     # hsv format: hue, saturation, value (brightness)
@@ -152,32 +190,6 @@ def get_objects_position(cv_image):
         for c in list(center):
             objects.append((c.round(),'green'))
 
-    # imc = cv_image.copy()
-    # conts = np.zeros(cv_image.shape,np.uint8)
-    # for i in range(len(cr)):
-    #     cv2.drawContours(imc, cr, i, (255, 0, 0), 2)
-    #     cv2.drawContours(conts, cr, i, (255, 255, 255), 1)
-    # for i in range(len(cg)):
-    #     cv2.drawContours(imc, cg, i, (255, 0, 0), 2)
-    #     cv2.drawContours(conts, cg, i, (255, 255, 255), 1)
-    #
-    # for o in objects:
-    #     center_coordinates = tuple(o[0])
-    #     center_coordinates = (center_coordinates[1],center_coordinates[0])
-    #     text_coordinates = (int(center_coordinates[0]-15),int(center_coordinates[1]-15))
-    #     if o[1]=='red': text_coordinates = (int(center_coordinates[0]+15),int(center_coordinates[1]+15))
-    #     radius = 1
-    #     color = (0,0,0)
-    #     thickness = 2
-    #     cv2.circle(imc, center_coordinates, radius, color, thickness)
-    #     cv2.putText(imc,str(center_coordinates)+', '+o[1],text_coordinates, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-
-    # cv2.imshow('Object Contours',conts)
-    # cv2.imshow('Recognised Objects',imc)
-    # cv2.imshow('Original Image',cv_image)
-    # cv2.imshow('Filtered Image',filtered)
-    # cv2.waitKey()
-
     return objects
 
 def count_objects(image):
@@ -210,14 +222,9 @@ busy = False
 standby_pose = (0.5,0.0,0.4)
 
 def read_camera(msg):
-
     open_gripper()
-    close_gripper()
 
-    print("Test ~~~")
     global standby_pose
-    global busy
-    if busy: return
 
     C=0.025/14.0
     cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
@@ -246,25 +253,15 @@ def get_object(obj_pixels,color):
     else:
         bucket = (-0.35,-0.35,0.25)
     move_to_specified_pose(standby_pose)
-    # success = move_to_specified_pose(pose)
-    # print(success)
-    # if not success:
-    #     success = move_to_specified_pose((pose[0]+0.001,pose[1]+0.001,pose[2]))
-    #     if not success:
-    #         print("ignoring unreachable object")
-    #         return
-    lower = (pose[0],pose[1],0.14)
+
     open_gripper()
+
+    lower = (pose[0],pose[1],0.14)
     move_to_specified_pose(lower)
 
     close_gripper()
 
     move_to_specified_pose(pose)
-
-    send_socket_msg(['check_gripper_state'],port=9988)
-
-    msg = receive_socket_msg('check_gripper_state',port=9989)
-    print(msg[1])
 
     move_to_specified_pose(bucket)
 
@@ -274,7 +271,6 @@ def get_object(obj_pixels,color):
 
 
 def get_gripper_angle(x,y):
-
     if (x<0 and y>0):
         theta = np.pi - np.arctan(-y/x)
     elif (x<0 and y<0):
@@ -290,25 +286,18 @@ def execution_status(msg):
     print('exec_status')
     return exev_status_text, exec_status_code
 
-def check_success(msg):
-    if msg.success == True:
-        sent_commands.delete(msg.command_seq)
 
 from moveit_msgs.msg import MoveGroupActionResult
 from actionlib_msgs.msg import GoalStatus
+import time
 
 def main():
     rospy.init_node('robot_state_publisher') #this is an existing topic
-
+    
     rospy.spin()
 
 sub = rospy.Subscriber("/"+ROBOT_NAME+"/camera_link_optical/image_raw", Image, read_camera) # Camera sensor, Image is the data type sensor_msgs/Image
 sub2 = rospy.Subscriber("/"+ROBOT_NAME+"/move_group/result", MoveGroupActionResult, execution_status)
-
-go_to_pose_confirmation_subscriber = rospy.Subscriber("/"+ROBOT_NAME+"/go_to_pose_confirmation",GoToPoseConfirmation,check_success)
-move_gripper_confirmation_subscriber = rospy.Subscriber("/"+ROBOT_NAME+"/move_gripper_confirmation",MoveGripperConfirmation,check_success)
-
-
 
 if __name__ == "__main__":
     main()

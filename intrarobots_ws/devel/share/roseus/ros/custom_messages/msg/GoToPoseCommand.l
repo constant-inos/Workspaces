@@ -18,18 +18,20 @@
 
 (defclass custom_messages::GoToPoseCommand
   :super ros::object
-  :slots (_header _robot_name _target_pose ))
+  :slots (_header _robot_name _command_id _target_pose ))
 
 (defmethod custom_messages::GoToPoseCommand
   (:init
    (&key
     ((:header __header) (instance std_msgs::Header :init))
     ((:robot_name __robot_name) "")
+    ((:command_id __command_id) "")
     ((:target_pose __target_pose) (instance geometry_msgs::Pose :init))
     )
    (send-super :init)
    (setq _header __header)
    (setq _robot_name (string __robot_name))
+   (setq _command_id (string __command_id))
    (setq _target_pose __target_pose)
    self)
   (:header
@@ -42,6 +44,9 @@
   (:robot_name
    (&optional __robot_name)
    (if __robot_name (setq _robot_name __robot_name)) _robot_name)
+  (:command_id
+   (&optional __command_id)
+   (if __command_id (setq _command_id __command_id)) _command_id)
   (:target_pose
    (&rest __target_pose)
    (if (keywordp (car __target_pose))
@@ -56,6 +61,8 @@
     (send _header :serialization-length)
     ;; string _robot_name
     4 (length _robot_name)
+    ;; string _command_id
+    4 (length _command_id)
     ;; geometry_msgs/Pose _target_pose
     (send _target_pose :serialization-length)
     ))
@@ -67,6 +74,8 @@
        (send _header :serialize s)
      ;; string _robot_name
        (write-long (length _robot_name) s) (princ _robot_name s)
+     ;; string _command_id
+       (write-long (length _command_id) s) (princ _command_id s)
      ;; geometry_msgs/Pose _target_pose
        (send _target_pose :serialize s)
      ;;
@@ -77,17 +86,20 @@
      (send _header :deserialize buf ptr-) (incf ptr- (send _header :serialization-length))
    ;; string _robot_name
      (let (n) (setq n (sys::peek buf ptr- :integer)) (incf ptr- 4) (setq _robot_name (subseq buf ptr- (+ ptr- n))) (incf ptr- n))
+   ;; string _command_id
+     (let (n) (setq n (sys::peek buf ptr- :integer)) (incf ptr- 4) (setq _command_id (subseq buf ptr- (+ ptr- n))) (incf ptr- n))
    ;; geometry_msgs/Pose _target_pose
      (send _target_pose :deserialize buf ptr-) (incf ptr- (send _target_pose :serialization-length))
    ;;
    self)
   )
 
-(setf (get custom_messages::GoToPoseCommand :md5sum-) "05eddb1fda3dba35a09c800d8d38c1ae")
+(setf (get custom_messages::GoToPoseCommand :md5sum-) "1b4f85f247f494474e3eb1a08aaaa2cb")
 (setf (get custom_messages::GoToPoseCommand :datatype-) "custom_messages/GoToPoseCommand")
 (setf (get custom_messages::GoToPoseCommand :definition-)
       "Header header
 string robot_name
+string command_id
 geometry_msgs/Pose target_pose
 
 ================================================================================
@@ -132,6 +144,6 @@ float64 w
 
 
 
-(provide :custom_messages/GoToPoseCommand "05eddb1fda3dba35a09c800d8d38c1ae")
+(provide :custom_messages/GoToPoseCommand "1b4f85f247f494474e3eb1a08aaaa2cb")
 
 

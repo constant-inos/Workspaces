@@ -3,8 +3,8 @@
           HEADER
           ROBOT_NAME-VAL
           ROBOT_NAME
-          COMMAND_SEQ-VAL
-          COMMAND_SEQ
+          COMMAND_ID-VAL
+          COMMAND_ID
           SUCCESS-VAL
           SUCCESS
 ))

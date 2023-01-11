@@ -17,11 +17,11 @@
     :initarg :robot_name
     :type cl:string
     :initform "")
-   (command_seq
-    :reader command_seq
-    :initarg :command_seq
-    :type cl:integer
-    :initform 0)
+   (command_id
+    :reader command_id
+    :initarg :command_id
+    :type cl:string
+    :initform "")
    (success
     :reader success
     :initarg :success
@@ -47,10 +47,10 @@
   (roslisp-msg-protocol:msg-deprecation-warning "Using old-style slot reader custom_messages-msg:robot_name-val is deprecated.  Use custom_messages-msg:robot_name instead.")
   (robot_name m))
 
-(cl:ensure-generic-function 'command_seq-val :lambda-list '(m))
-(cl:defmethod command_seq-val ((m <MoveGripperConfirmation>))
-  (roslisp-msg-protocol:msg-deprecation-warning "Using old-style slot reader custom_messages-msg:command_seq-val is deprecated.  Use custom_messages-msg:command_seq instead.")
-  (command_seq m))
+(cl:ensure-generic-function 'command_id-val :lambda-list '(m))
+(cl:defmethod command_id-val ((m <MoveGripperConfirmation>))
+  (roslisp-msg-protocol:msg-deprecation-warning "Using old-style slot reader custom_messages-msg:command_id-val is deprecated.  Use custom_messages-msg:command_id instead.")
+  (command_id m))
 
 (cl:ensure-generic-function 'success-val :lambda-list '(m))
 (cl:defmethod success-val ((m <MoveGripperConfirmation>))
@@ -65,10 +65,12 @@
     (cl:write-byte (cl:ldb (cl:byte 8 16) __ros_str_len) ostream)
     (cl:write-byte (cl:ldb (cl:byte 8 24) __ros_str_len) ostream))
   (cl:map cl:nil #'(cl:lambda (c) (cl:write-byte (cl:char-code c) ostream)) (cl:slot-value msg 'robot_name))
-  (cl:write-byte (cl:ldb (cl:byte 8 0) (cl:slot-value msg 'command_seq)) ostream)
-  (cl:write-byte (cl:ldb (cl:byte 8 8) (cl:slot-value msg 'command_seq)) ostream)
-  (cl:write-byte (cl:ldb (cl:byte 8 16) (cl:slot-value msg 'command_seq)) ostream)
-  (cl:write-byte (cl:ldb (cl:byte 8 24) (cl:slot-value msg 'command_seq)) ostream)
+  (cl:let ((__ros_str_len (cl:length (cl:slot-value msg 'command_id))))
+    (cl:write-byte (cl:ldb (cl:byte 8 0) __ros_str_len) ostream)
+    (cl:write-byte (cl:ldb (cl:byte 8 8) __ros_str_len) ostream)
+    (cl:write-byte (cl:ldb (cl:byte 8 16) __ros_str_len) ostream)
+    (cl:write-byte (cl:ldb (cl:byte 8 24) __ros_str_len) ostream))
+  (cl:map cl:nil #'(cl:lambda (c) (cl:write-byte (cl:char-code c) ostream)) (cl:slot-value msg 'command_id))
   (cl:write-byte (cl:ldb (cl:byte 8 0) (cl:if (cl:slot-value msg 'success) 1 0)) ostream)
 )
 (cl:defmethod roslisp-msg-protocol:deserialize ((msg <MoveGripperConfirmation>) istream)
@@ -82,10 +84,14 @@
       (cl:setf (cl:slot-value msg 'robot_name) (cl:make-string __ros_str_len))
       (cl:dotimes (__ros_str_idx __ros_str_len msg)
         (cl:setf (cl:char (cl:slot-value msg 'robot_name) __ros_str_idx) (cl:code-char (cl:read-byte istream)))))
-    (cl:setf (cl:ldb (cl:byte 8 0) (cl:slot-value msg 'command_seq)) (cl:read-byte istream))
-    (cl:setf (cl:ldb (cl:byte 8 8) (cl:slot-value msg 'command_seq)) (cl:read-byte istream))
-    (cl:setf (cl:ldb (cl:byte 8 16) (cl:slot-value msg 'command_seq)) (cl:read-byte istream))
-    (cl:setf (cl:ldb (cl:byte 8 24) (cl:slot-value msg 'command_seq)) (cl:read-byte istream))
+    (cl:let ((__ros_str_len 0))
+      (cl:setf (cl:ldb (cl:byte 8 0) __ros_str_len) (cl:read-byte istream))
+      (cl:setf (cl:ldb (cl:byte 8 8) __ros_str_len) (cl:read-byte istream))
+      (cl:setf (cl:ldb (cl:byte 8 16) __ros_str_len) (cl:read-byte istream))
+      (cl:setf (cl:ldb (cl:byte 8 24) __ros_str_len) (cl:read-byte istream))
+      (cl:setf (cl:slot-value msg 'command_id) (cl:make-string __ros_str_len))
+      (cl:dotimes (__ros_str_idx __ros_str_len msg)
+        (cl:setf (cl:char (cl:slot-value msg 'command_id) __ros_str_idx) (cl:code-char (cl:read-byte istream)))))
     (cl:setf (cl:slot-value msg 'success) (cl:not (cl:zerop (cl:read-byte istream))))
   msg
 )
@@ -97,21 +103,21 @@
   "custom_messages/MoveGripperConfirmation")
 (cl:defmethod roslisp-msg-protocol:md5sum ((type (cl:eql '<MoveGripperConfirmation>)))
   "Returns md5sum for a message object of type '<MoveGripperConfirmation>"
-  "bf37a5a5bd1d5d54d0cd95b0a2f2076c")
+  "d1e861f7b9dd4217596bf13b98116564")
 (cl:defmethod roslisp-msg-protocol:md5sum ((type (cl:eql 'MoveGripperConfirmation)))
   "Returns md5sum for a message object of type 'MoveGripperConfirmation"
-  "bf37a5a5bd1d5d54d0cd95b0a2f2076c")
+  "d1e861f7b9dd4217596bf13b98116564")
 (cl:defmethod roslisp-msg-protocol:message-definition ((type (cl:eql '<MoveGripperConfirmation>)))
   "Returns full string definition for message of type '<MoveGripperConfirmation>"
-  (cl:format cl:nil "Header header~%string robot_name~%uint32 command_seq~%bool success~%~%================================================================================~%MSG: std_msgs/Header~%# Standard metadata for higher-level stamped data types.~%# This is generally used to communicate timestamped data ~%# in a particular coordinate frame.~%# ~%# sequence ID: consecutively increasing ID ~%uint32 seq~%#Two-integer timestamp that is expressed as:~%# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')~%# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')~%# time-handling sugar is provided by the client library~%time stamp~%#Frame this data is associated with~%string frame_id~%~%~%"))
+  (cl:format cl:nil "Header header~%string robot_name~%string command_id~%bool success~%~%================================================================================~%MSG: std_msgs/Header~%# Standard metadata for higher-level stamped data types.~%# This is generally used to communicate timestamped data ~%# in a particular coordinate frame.~%# ~%# sequence ID: consecutively increasing ID ~%uint32 seq~%#Two-integer timestamp that is expressed as:~%# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')~%# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')~%# time-handling sugar is provided by the client library~%time stamp~%#Frame this data is associated with~%string frame_id~%~%~%"))
 (cl:defmethod roslisp-msg-protocol:message-definition ((type (cl:eql 'MoveGripperConfirmation)))
   "Returns full string definition for message of type 'MoveGripperConfirmation"
-  (cl:format cl:nil "Header header~%string robot_name~%uint32 command_seq~%bool success~%~%================================================================================~%MSG: std_msgs/Header~%# Standard metadata for higher-level stamped data types.~%# This is generally used to communicate timestamped data ~%# in a particular coordinate frame.~%# ~%# sequence ID: consecutively increasing ID ~%uint32 seq~%#Two-integer timestamp that is expressed as:~%# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')~%# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')~%# time-handling sugar is provided by the client library~%time stamp~%#Frame this data is associated with~%string frame_id~%~%~%"))
+  (cl:format cl:nil "Header header~%string robot_name~%string command_id~%bool success~%~%================================================================================~%MSG: std_msgs/Header~%# Standard metadata for higher-level stamped data types.~%# This is generally used to communicate timestamped data ~%# in a particular coordinate frame.~%# ~%# sequence ID: consecutively increasing ID ~%uint32 seq~%#Two-integer timestamp that is expressed as:~%# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')~%# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')~%# time-handling sugar is provided by the client library~%time stamp~%#Frame this data is associated with~%string frame_id~%~%~%"))
 (cl:defmethod roslisp-msg-protocol:serialization-length ((msg <MoveGripperConfirmation>))
   (cl:+ 0
      (roslisp-msg-protocol:serialization-length (cl:slot-value msg 'header))
      4 (cl:length (cl:slot-value msg 'robot_name))
-     4
+     4 (cl:length (cl:slot-value msg 'command_id))
      1
 ))
 (cl:defmethod roslisp-msg-protocol:ros-message-to-list ((msg <MoveGripperConfirmation>))
@@ -119,6 +125,6 @@
   (cl:list 'MoveGripperConfirmation
     (cl:cons ':header (header msg))
     (cl:cons ':robot_name (robot_name msg))
-    (cl:cons ':command_seq (command_seq msg))
+    (cl:cons ':command_id (command_id msg))
     (cl:cons ':success (success msg))
 ))

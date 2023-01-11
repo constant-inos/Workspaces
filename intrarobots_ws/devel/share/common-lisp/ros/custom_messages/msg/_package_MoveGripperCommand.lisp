@@ -3,6 +3,8 @@
           HEADER
           ROBOT_NAME-VAL
           ROBOT_NAME
-          CMD-VAL
-          CMD
+          COMMAND_ID-VAL
+          COMMAND_ID
+          COMMAND-VAL
+          COMMAND
 ))

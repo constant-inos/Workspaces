@@ -21,7 +21,8 @@ class MoveGripperCommand {
       // initObj === null is a special case for deserialization where we don't initialize fields
       this.header = null;
       this.robot_name = null;
-      this.cmd = null;
+      this.command_id = null;
+      this.command = null;
     }
     else {
       if (initObj.hasOwnProperty('header')) {
@@ -36,11 +37,17 @@ class MoveGripperCommand {
       else {
         this.robot_name = '';
       }
-      if (initObj.hasOwnProperty('cmd')) {
-        this.cmd = initObj.cmd
+      if (initObj.hasOwnProperty('command_id')) {
+        this.command_id = initObj.command_id
       }
       else {
-        this.cmd = '';
+        this.command_id = '';
+      }
+      if (initObj.hasOwnProperty('command')) {
+        this.command = initObj.command
+      }
+      else {
+        this.command = '';
       }
     }
   }
@@ -51,8 +58,10 @@ class MoveGripperCommand {
     bufferOffset = std_msgs.msg.Header.serialize(obj.header, buffer, bufferOffset);
     // Serialize message field [robot_name]
     bufferOffset = _serializer.string(obj.robot_name, buffer, bufferOffset);
-    // Serialize message field [cmd]
-    bufferOffset = _serializer.string(obj.cmd, buffer, bufferOffset);
+    // Serialize message field [command_id]
+    bufferOffset = _serializer.string(obj.command_id, buffer, bufferOffset);
+    // Serialize message field [command]
+    bufferOffset = _serializer.string(obj.command, buffer, bufferOffset);
     return bufferOffset;
   }
 
@@ -64,8 +73,10 @@ class MoveGripperCommand {
     data.header = std_msgs.msg.Header.deserialize(buffer, bufferOffset);
     // Deserialize message field [robot_name]
     data.robot_name = _deserializer.string(buffer, bufferOffset);
-    // Deserialize message field [cmd]
-    data.cmd = _deserializer.string(buffer, bufferOffset);
+    // Deserialize message field [command_id]
+    data.command_id = _deserializer.string(buffer, bufferOffset);
+    // Deserialize message field [command]
+    data.command = _deserializer.string(buffer, bufferOffset);
     return data;
   }
 
@@ -73,8 +84,9 @@ class MoveGripperCommand {
     let length = 0;
     length += std_msgs.msg.Header.getMessageSize(object.header);
     length += _getByteLength(object.robot_name);
-    length += _getByteLength(object.cmd);
-    return length + 8;
+    length += _getByteLength(object.command_id);
+    length += _getByteLength(object.command);
+    return length + 12;
   }
 
   static datatype() {
@@ -84,7 +96,7 @@ class MoveGripperCommand {
 
   static md5sum() {
     //Returns md5sum for a message object
-    return 'c7eca5acbbe328698e1bba54b90270b6';
+    return '01641dfa5597b5e4124d01564db602c3';
   }
 
   static messageDefinition() {
@@ -92,7 +104,8 @@ class MoveGripperCommand {
     return `
     Header header
     string robot_name
-    string cmd
+    string command_id
+    string command
     
     ================================================================================
     MSG: std_msgs/Header
@@ -133,11 +146,18 @@ class MoveGripperCommand {
       resolved.robot_name = ''
     }
 
-    if (msg.cmd !== undefined) {
-      resolved.cmd = msg.cmd;
+    if (msg.command_id !== undefined) {
+      resolved.command_id = msg.command_id;
     }
     else {
-      resolved.cmd = ''
+      resolved.command_id = ''
+    }
+
+    if (msg.command !== undefined) {
+      resolved.command = msg.command;
+    }
+    else {
+      resolved.command = ''
     }
 
     return resolved;

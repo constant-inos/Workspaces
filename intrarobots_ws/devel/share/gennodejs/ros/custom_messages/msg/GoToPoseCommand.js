@@ -11,8 +11,8 @@ const _deserializer = _ros_msg_utils.Deserialize;
 const _arrayDeserializer = _deserializer.Array;
 const _finder = _ros_msg_utils.Find;
 const _getByteLength = _ros_msg_utils.getByteLength;
-let geometry_msgs = _finder('geometry_msgs');
 let std_msgs = _finder('std_msgs');
+let geometry_msgs = _finder('geometry_msgs');
 
 //-----------------------------------------------------------
 
@@ -22,6 +22,7 @@ class GoToPoseCommand {
       // initObj === null is a special case for deserialization where we don't initialize fields
       this.header = null;
       this.robot_name = null;
+      this.command_id = null;
       this.target_pose = null;
     }
     else {
@@ -36,6 +37,12 @@ class GoToPoseCommand {
       }
       else {
         this.robot_name = '';
+      }
+      if (initObj.hasOwnProperty('command_id')) {
+        this.command_id = initObj.command_id
+      }
+      else {
+        this.command_id = '';
       }
       if (initObj.hasOwnProperty('target_pose')) {
         this.target_pose = initObj.target_pose
@@ -52,6 +59,8 @@ class GoToPoseCommand {
     bufferOffset = std_msgs.msg.Header.serialize(obj.header, buffer, bufferOffset);
     // Serialize message field [robot_name]
     bufferOffset = _serializer.string(obj.robot_name, buffer, bufferOffset);
+    // Serialize message field [command_id]
+    bufferOffset = _serializer.string(obj.command_id, buffer, bufferOffset);
     // Serialize message field [target_pose]
     bufferOffset = geometry_msgs.msg.Pose.serialize(obj.target_pose, buffer, bufferOffset);
     return bufferOffset;
@@ -65,6 +74,8 @@ class GoToPoseCommand {
     data.header = std_msgs.msg.Header.deserialize(buffer, bufferOffset);
     // Deserialize message field [robot_name]
     data.robot_name = _deserializer.string(buffer, bufferOffset);
+    // Deserialize message field [command_id]
+    data.command_id = _deserializer.string(buffer, bufferOffset);
     // Deserialize message field [target_pose]
     data.target_pose = geometry_msgs.msg.Pose.deserialize(buffer, bufferOffset);
     return data;
@@ -74,7 +85,8 @@ class GoToPoseCommand {
     let length = 0;
     length += std_msgs.msg.Header.getMessageSize(object.header);
     length += _getByteLength(object.robot_name);
-    return length + 60;
+    length += _getByteLength(object.command_id);
+    return length + 64;
   }
 
   static datatype() {
@@ -84,7 +96,7 @@ class GoToPoseCommand {
 
   static md5sum() {
     //Returns md5sum for a message object
-    return '05eddb1fda3dba35a09c800d8d38c1ae';
+    return '1b4f85f247f494474e3eb1a08aaaa2cb';
   }
 
   static messageDefinition() {
@@ -92,6 +104,7 @@ class GoToPoseCommand {
     return `
     Header header
     string robot_name
+    string command_id
     geometry_msgs/Pose target_pose
     
     ================================================================================
@@ -153,6 +166,13 @@ class GoToPoseCommand {
     }
     else {
       resolved.robot_name = ''
+    }
+
+    if (msg.command_id !== undefined) {
+      resolved.command_id = msg.command_id;
+    }
+    else {
+      resolved.command_id = ''
     }
 
     if (msg.target_pose !== undefined) {

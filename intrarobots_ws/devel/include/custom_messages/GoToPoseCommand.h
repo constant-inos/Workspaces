@@ -28,11 +28,13 @@ struct GoToPoseCommand_
   GoToPoseCommand_()
     : header()
     , robot_name()
+    , command_id()
     , target_pose()  {
     }
   GoToPoseCommand_(const ContainerAllocator& _alloc)
     : header(_alloc)
     , robot_name(_alloc)
+    , command_id(_alloc)
     , target_pose(_alloc)  {
   (void)_alloc;
     }
@@ -44,6 +46,9 @@ struct GoToPoseCommand_
 
    typedef std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>> _robot_name_type;
   _robot_name_type robot_name;
+
+   typedef std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>> _command_id_type;
+  _command_id_type command_id;
 
    typedef  ::geometry_msgs::Pose_<ContainerAllocator>  _target_pose_type;
   _target_pose_type target_pose;
@@ -79,6 +84,7 @@ bool operator==(const ::custom_messages::GoToPoseCommand_<ContainerAllocator1> &
 {
   return lhs.header == rhs.header &&
     lhs.robot_name == rhs.robot_name &&
+    lhs.command_id == rhs.command_id &&
     lhs.target_pose == rhs.target_pose;
 }
 
@@ -136,12 +142,12 @@ struct MD5Sum< ::custom_messages::GoToPoseCommand_<ContainerAllocator> >
 {
   static const char* value()
   {
-    return "05eddb1fda3dba35a09c800d8d38c1ae";
+    return "1b4f85f247f494474e3eb1a08aaaa2cb";
   }
 
   static const char* value(const ::custom_messages::GoToPoseCommand_<ContainerAllocator>&) { return value(); }
-  static const uint64_t static_value1 = 0x05eddb1fda3dba35ULL;
-  static const uint64_t static_value2 = 0xa09c800d8d38c1aeULL;
+  static const uint64_t static_value1 = 0x1b4f85f247f49447ULL;
+  static const uint64_t static_value2 = 0x4e3eb1a08aaaa2cbULL;
 };
 
 template<class ContainerAllocator>
@@ -162,6 +168,7 @@ struct Definition< ::custom_messages::GoToPoseCommand_<ContainerAllocator> >
   {
     return "Header header\n"
 "string robot_name\n"
+"string command_id\n"
 "geometry_msgs/Pose target_pose\n"
 "\n"
 "================================================================================\n"
@@ -221,6 +228,7 @@ namespace serialization
     {
       stream.next(m.header);
       stream.next(m.robot_name);
+      stream.next(m.command_id);
       stream.next(m.target_pose);
     }
 
@@ -245,6 +253,8 @@ struct Printer< ::custom_messages::GoToPoseCommand_<ContainerAllocator> >
     Printer< ::std_msgs::Header_<ContainerAllocator> >::stream(s, indent + "  ", v.header);
     s << indent << "robot_name: ";
     Printer<std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::stream(s, indent + "  ", v.robot_name);
+    s << indent << "command_id: ";
+    Printer<std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::stream(s, indent + "  ", v.command_id);
     s << indent << "target_pose: ";
     s << std::endl;
     Printer< ::geometry_msgs::Pose_<ContainerAllocator> >::stream(s, indent + "  ", v.target_pose);

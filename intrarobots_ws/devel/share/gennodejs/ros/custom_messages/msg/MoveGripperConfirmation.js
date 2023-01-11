@@ -21,7 +21,7 @@ class MoveGripperConfirmation {
       // initObj === null is a special case for deserialization where we don't initialize fields
       this.header = null;
       this.robot_name = null;
-      this.command_seq = null;
+      this.command_id = null;
       this.success = null;
     }
     else {
@@ -37,11 +37,11 @@ class MoveGripperConfirmation {
       else {
         this.robot_name = '';
       }
-      if (initObj.hasOwnProperty('command_seq')) {
-        this.command_seq = initObj.command_seq
+      if (initObj.hasOwnProperty('command_id')) {
+        this.command_id = initObj.command_id
       }
       else {
-        this.command_seq = 0;
+        this.command_id = '';
       }
       if (initObj.hasOwnProperty('success')) {
         this.success = initObj.success
@@ -58,8 +58,8 @@ class MoveGripperConfirmation {
     bufferOffset = std_msgs.msg.Header.serialize(obj.header, buffer, bufferOffset);
     // Serialize message field [robot_name]
     bufferOffset = _serializer.string(obj.robot_name, buffer, bufferOffset);
-    // Serialize message field [command_seq]
-    bufferOffset = _serializer.uint32(obj.command_seq, buffer, bufferOffset);
+    // Serialize message field [command_id]
+    bufferOffset = _serializer.string(obj.command_id, buffer, bufferOffset);
     // Serialize message field [success]
     bufferOffset = _serializer.bool(obj.success, buffer, bufferOffset);
     return bufferOffset;
@@ -73,8 +73,8 @@ class MoveGripperConfirmation {
     data.header = std_msgs.msg.Header.deserialize(buffer, bufferOffset);
     // Deserialize message field [robot_name]
     data.robot_name = _deserializer.string(buffer, bufferOffset);
-    // Deserialize message field [command_seq]
-    data.command_seq = _deserializer.uint32(buffer, bufferOffset);
+    // Deserialize message field [command_id]
+    data.command_id = _deserializer.string(buffer, bufferOffset);
     // Deserialize message field [success]
     data.success = _deserializer.bool(buffer, bufferOffset);
     return data;
@@ -84,6 +84,7 @@ class MoveGripperConfirmation {
     let length = 0;
     length += std_msgs.msg.Header.getMessageSize(object.header);
     length += _getByteLength(object.robot_name);
+    length += _getByteLength(object.command_id);
     return length + 9;
   }
 
@@ -94,7 +95,7 @@ class MoveGripperConfirmation {
 
   static md5sum() {
     //Returns md5sum for a message object
-    return 'bf37a5a5bd1d5d54d0cd95b0a2f2076c';
+    return 'd1e861f7b9dd4217596bf13b98116564';
   }
 
   static messageDefinition() {
@@ -102,7 +103,7 @@ class MoveGripperConfirmation {
     return `
     Header header
     string robot_name
-    uint32 command_seq
+    string command_id
     bool success
     
     ================================================================================
@@ -144,11 +145,11 @@ class MoveGripperConfirmation {
       resolved.robot_name = ''
     }
 
-    if (msg.command_seq !== undefined) {
-      resolved.command_seq = msg.command_seq;
+    if (msg.command_id !== undefined) {
+      resolved.command_id = msg.command_id;
     }
     else {
-      resolved.command_seq = 0
+      resolved.command_id = ''
     }
 
     if (msg.success !== undefined) {

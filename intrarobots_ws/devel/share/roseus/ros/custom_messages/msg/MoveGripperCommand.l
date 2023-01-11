@@ -16,19 +16,21 @@
 
 (defclass custom_messages::MoveGripperCommand
   :super ros::object
-  :slots (_header _robot_name _cmd ))
+  :slots (_header _robot_name _command_id _command ))
 
 (defmethod custom_messages::MoveGripperCommand
   (:init
    (&key
     ((:header __header) (instance std_msgs::Header :init))
     ((:robot_name __robot_name) "")
-    ((:cmd __cmd) "")
+    ((:command_id __command_id) "")
+    ((:command __command) "")
     )
    (send-super :init)
    (setq _header __header)
    (setq _robot_name (string __robot_name))
-   (setq _cmd (string __cmd))
+   (setq _command_id (string __command_id))
+   (setq _command (string __command))
    self)
   (:header
    (&rest __header)
@@ -40,9 +42,12 @@
   (:robot_name
    (&optional __robot_name)
    (if __robot_name (setq _robot_name __robot_name)) _robot_name)
-  (:cmd
-   (&optional __cmd)
-   (if __cmd (setq _cmd __cmd)) _cmd)
+  (:command_id
+   (&optional __command_id)
+   (if __command_id (setq _command_id __command_id)) _command_id)
+  (:command
+   (&optional __command)
+   (if __command (setq _command __command)) _command)
   (:serialization-length
    ()
    (+
@@ -50,8 +55,10 @@
     (send _header :serialization-length)
     ;; string _robot_name
     4 (length _robot_name)
-    ;; string _cmd
-    4 (length _cmd)
+    ;; string _command_id
+    4 (length _command_id)
+    ;; string _command
+    4 (length _command)
     ))
   (:serialize
    (&optional strm)
@@ -61,8 +68,10 @@
        (send _header :serialize s)
      ;; string _robot_name
        (write-long (length _robot_name) s) (princ _robot_name s)
-     ;; string _cmd
-       (write-long (length _cmd) s) (princ _cmd s)
+     ;; string _command_id
+       (write-long (length _command_id) s) (princ _command_id s)
+     ;; string _command
+       (write-long (length _command) s) (princ _command s)
      ;;
      (if (null strm) (get-output-stream-string s))))
   (:deserialize
@@ -71,18 +80,21 @@
      (send _header :deserialize buf ptr-) (incf ptr- (send _header :serialization-length))
    ;; string _robot_name
      (let (n) (setq n (sys::peek buf ptr- :integer)) (incf ptr- 4) (setq _robot_name (subseq buf ptr- (+ ptr- n))) (incf ptr- n))
-   ;; string _cmd
-     (let (n) (setq n (sys::peek buf ptr- :integer)) (incf ptr- 4) (setq _cmd (subseq buf ptr- (+ ptr- n))) (incf ptr- n))
+   ;; string _command_id
+     (let (n) (setq n (sys::peek buf ptr- :integer)) (incf ptr- 4) (setq _command_id (subseq buf ptr- (+ ptr- n))) (incf ptr- n))
+   ;; string _command
+     (let (n) (setq n (sys::peek buf ptr- :integer)) (incf ptr- 4) (setq _command (subseq buf ptr- (+ ptr- n))) (incf ptr- n))
    ;;
    self)
   )
 
-(setf (get custom_messages::MoveGripperCommand :md5sum-) "c7eca5acbbe328698e1bba54b90270b6")
+(setf (get custom_messages::MoveGripperCommand :md5sum-) "01641dfa5597b5e4124d01564db602c3")
 (setf (get custom_messages::MoveGripperCommand :datatype-) "custom_messages/MoveGripperCommand")
 (setf (get custom_messages::MoveGripperCommand :definition-)
       "Header header
 string robot_name
-string cmd
+string command_id
+string command
 
 ================================================================================
 MSG: std_msgs/Header
@@ -104,6 +116,6 @@ string frame_id
 
 
 
-(provide :custom_messages/MoveGripperCommand "c7eca5acbbe328698e1bba54b90270b6")
+(provide :custom_messages/MoveGripperCommand "01641dfa5597b5e4124d01564db602c3")
 
 

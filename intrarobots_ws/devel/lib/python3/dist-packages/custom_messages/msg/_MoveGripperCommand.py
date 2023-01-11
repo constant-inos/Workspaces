@@ -9,12 +9,13 @@ import struct
 import std_msgs.msg
 
 class MoveGripperCommand(genpy.Message):
-  _md5sum = "c7eca5acbbe328698e1bba54b90270b6"
+  _md5sum = "01641dfa5597b5e4124d01564db602c3"
   _type = "custom_messages/MoveGripperCommand"
   _has_header = True  # flag to mark the presence of a Header object
   _full_text = """Header header
 string robot_name
-string cmd
+string command_id
+string command
 
 ================================================================================
 MSG: std_msgs/Header
@@ -32,8 +33,8 @@ time stamp
 #Frame this data is associated with
 string frame_id
 """
-  __slots__ = ['header','robot_name','cmd']
-  _slot_types = ['std_msgs/Header','string','string']
+  __slots__ = ['header','robot_name','command_id','command']
+  _slot_types = ['std_msgs/Header','string','string','string']
 
   def __init__(self, *args, **kwds):
     """
@@ -43,7 +44,7 @@ string frame_id
     changes.  You cannot mix in-order arguments and keyword arguments.
 
     The available fields are:
-       header,robot_name,cmd
+       header,robot_name,command_id,command
 
     :param args: complete set of field values, in .msg order
     :param kwds: use keyword arguments corresponding to message field names
@@ -56,12 +57,15 @@ string frame_id
         self.header = std_msgs.msg.Header()
       if self.robot_name is None:
         self.robot_name = ''
-      if self.cmd is None:
-        self.cmd = ''
+      if self.command_id is None:
+        self.command_id = ''
+      if self.command is None:
+        self.command = ''
     else:
       self.header = std_msgs.msg.Header()
       self.robot_name = ''
-      self.cmd = ''
+      self.command_id = ''
+      self.command = ''
 
   def _get_types(self):
     """
@@ -89,7 +93,13 @@ string frame_id
         _x = _x.encode('utf-8')
         length = len(_x)
       buff.write(struct.Struct('<I%ss'%length).pack(length, _x))
-      _x = self.cmd
+      _x = self.command_id
+      length = len(_x)
+      if python3 or type(_x) == unicode:
+        _x = _x.encode('utf-8')
+        length = len(_x)
+      buff.write(struct.Struct('<I%ss'%length).pack(length, _x))
+      _x = self.command
       length = len(_x)
       if python3 or type(_x) == unicode:
         _x = _x.encode('utf-8')
@@ -137,9 +147,18 @@ string frame_id
       start = end
       end += length
       if python3:
-        self.cmd = str[start:end].decode('utf-8', 'rosmsg')
+        self.command_id = str[start:end].decode('utf-8', 'rosmsg')
       else:
-        self.cmd = str[start:end]
+        self.command_id = str[start:end]
+      start = end
+      end += 4
+      (length,) = _struct_I.unpack(str[start:end])
+      start = end
+      end += length
+      if python3:
+        self.command = str[start:end].decode('utf-8', 'rosmsg')
+      else:
+        self.command = str[start:end]
       return self
     except struct.error as e:
       raise genpy.DeserializationError(e)  # most likely buffer underfill
@@ -166,7 +185,13 @@ string frame_id
         _x = _x.encode('utf-8')
         length = len(_x)
       buff.write(struct.Struct('<I%ss'%length).pack(length, _x))
-      _x = self.cmd
+      _x = self.command_id
+      length = len(_x)
+      if python3 or type(_x) == unicode:
+        _x = _x.encode('utf-8')
+        length = len(_x)
+      buff.write(struct.Struct('<I%ss'%length).pack(length, _x))
+      _x = self.command
       length = len(_x)
       if python3 or type(_x) == unicode:
         _x = _x.encode('utf-8')
@@ -215,9 +240,18 @@ string frame_id
       start = end
       end += length
       if python3:
-        self.cmd = str[start:end].decode('utf-8', 'rosmsg')
+        self.command_id = str[start:end].decode('utf-8', 'rosmsg')
       else:
-        self.cmd = str[start:end]
+        self.command_id = str[start:end]
+      start = end
+      end += 4
+      (length,) = _struct_I.unpack(str[start:end])
+      start = end
+      end += length
+      if python3:
+        self.command = str[start:end].decode('utf-8', 'rosmsg')
+      else:
+        self.command = str[start:end]
       return self
     except struct.error as e:
       raise genpy.DeserializationError(e)  # most likely buffer underfill

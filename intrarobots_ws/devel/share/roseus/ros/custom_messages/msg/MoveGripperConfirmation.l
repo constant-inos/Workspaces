@@ -16,20 +16,20 @@
 
 (defclass custom_messages::MoveGripperConfirmation
   :super ros::object
-  :slots (_header _robot_name _command_seq _success ))
+  :slots (_header _robot_name _command_id _success ))
 
 (defmethod custom_messages::MoveGripperConfirmation
   (:init
    (&key
     ((:header __header) (instance std_msgs::Header :init))
     ((:robot_name __robot_name) "")
-    ((:command_seq __command_seq) 0)
+    ((:command_id __command_id) "")
     ((:success __success) nil)
     )
    (send-super :init)
    (setq _header __header)
    (setq _robot_name (string __robot_name))
-   (setq _command_seq (round __command_seq))
+   (setq _command_id (string __command_id))
    (setq _success __success)
    self)
   (:header
@@ -42,9 +42,9 @@
   (:robot_name
    (&optional __robot_name)
    (if __robot_name (setq _robot_name __robot_name)) _robot_name)
-  (:command_seq
-   (&optional __command_seq)
-   (if __command_seq (setq _command_seq __command_seq)) _command_seq)
+  (:command_id
+   (&optional __command_id)
+   (if __command_id (setq _command_id __command_id)) _command_id)
   (:success
    (&optional (__success :null))
    (if (not (eq __success :null)) (setq _success __success)) _success)
@@ -55,8 +55,8 @@
     (send _header :serialization-length)
     ;; string _robot_name
     4 (length _robot_name)
-    ;; uint32 _command_seq
-    4
+    ;; string _command_id
+    4 (length _command_id)
     ;; bool _success
     1
     ))
@@ -68,8 +68,8 @@
        (send _header :serialize s)
      ;; string _robot_name
        (write-long (length _robot_name) s) (princ _robot_name s)
-     ;; uint32 _command_seq
-       (write-long _command_seq s)
+     ;; string _command_id
+       (write-long (length _command_id) s) (princ _command_id s)
      ;; bool _success
        (if _success (write-byte -1 s) (write-byte 0 s))
      ;;
@@ -80,20 +80,20 @@
      (send _header :deserialize buf ptr-) (incf ptr- (send _header :serialization-length))
    ;; string _robot_name
      (let (n) (setq n (sys::peek buf ptr- :integer)) (incf ptr- 4) (setq _robot_name (subseq buf ptr- (+ ptr- n))) (incf ptr- n))
-   ;; uint32 _command_seq
-     (setq _command_seq (sys::peek buf ptr- :integer)) (incf ptr- 4)
+   ;; string _command_id
+     (let (n) (setq n (sys::peek buf ptr- :integer)) (incf ptr- 4) (setq _command_id (subseq buf ptr- (+ ptr- n))) (incf ptr- n))
    ;; bool _success
      (setq _success (not (= 0 (sys::peek buf ptr- :char)))) (incf ptr- 1)
    ;;
    self)
   )
 
-(setf (get custom_messages::MoveGripperConfirmation :md5sum-) "bf37a5a5bd1d5d54d0cd95b0a2f2076c")
+(setf (get custom_messages::MoveGripperConfirmation :md5sum-) "d1e861f7b9dd4217596bf13b98116564")
 (setf (get custom_messages::MoveGripperConfirmation :datatype-) "custom_messages/MoveGripperConfirmation")
 (setf (get custom_messages::MoveGripperConfirmation :definition-)
       "Header header
 string robot_name
-uint32 command_seq
+string command_id
 bool success
 
 ================================================================================
@@ -116,6 +116,6 @@ string frame_id
 
 
 
-(provide :custom_messages/MoveGripperConfirmation "bf37a5a5bd1d5d54d0cd95b0a2f2076c")
+(provide :custom_messages/MoveGripperConfirmation "d1e861f7b9dd4217596bf13b98116564")
 
 

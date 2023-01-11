@@ -27,12 +27,14 @@ struct MoveGripperCommand_
   MoveGripperCommand_()
     : header()
     , robot_name()
-    , cmd()  {
+    , command_id()
+    , command()  {
     }
   MoveGripperCommand_(const ContainerAllocator& _alloc)
     : header(_alloc)
     , robot_name(_alloc)
-    , cmd(_alloc)  {
+    , command_id(_alloc)
+    , command(_alloc)  {
   (void)_alloc;
     }
 
@@ -44,8 +46,11 @@ struct MoveGripperCommand_
    typedef std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>> _robot_name_type;
   _robot_name_type robot_name;
 
-   typedef std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>> _cmd_type;
-  _cmd_type cmd;
+   typedef std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>> _command_id_type;
+  _command_id_type command_id;
+
+   typedef std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>> _command_type;
+  _command_type command;
 
 
 
@@ -78,7 +83,8 @@ bool operator==(const ::custom_messages::MoveGripperCommand_<ContainerAllocator1
 {
   return lhs.header == rhs.header &&
     lhs.robot_name == rhs.robot_name &&
-    lhs.cmd == rhs.cmd;
+    lhs.command_id == rhs.command_id &&
+    lhs.command == rhs.command;
 }
 
 template<typename ContainerAllocator1, typename ContainerAllocator2>
@@ -135,12 +141,12 @@ struct MD5Sum< ::custom_messages::MoveGripperCommand_<ContainerAllocator> >
 {
   static const char* value()
   {
-    return "c7eca5acbbe328698e1bba54b90270b6";
+    return "01641dfa5597b5e4124d01564db602c3";
   }
 
   static const char* value(const ::custom_messages::MoveGripperCommand_<ContainerAllocator>&) { return value(); }
-  static const uint64_t static_value1 = 0xc7eca5acbbe32869ULL;
-  static const uint64_t static_value2 = 0x8e1bba54b90270b6ULL;
+  static const uint64_t static_value1 = 0x01641dfa5597b5e4ULL;
+  static const uint64_t static_value2 = 0x124d01564db602c3ULL;
 };
 
 template<class ContainerAllocator>
@@ -161,7 +167,8 @@ struct Definition< ::custom_messages::MoveGripperCommand_<ContainerAllocator> >
   {
     return "Header header\n"
 "string robot_name\n"
-"string cmd\n"
+"string command_id\n"
+"string command\n"
 "\n"
 "================================================================================\n"
 "MSG: std_msgs/Header\n"
@@ -198,7 +205,8 @@ namespace serialization
     {
       stream.next(m.header);
       stream.next(m.robot_name);
-      stream.next(m.cmd);
+      stream.next(m.command_id);
+      stream.next(m.command);
     }
 
     ROS_DECLARE_ALLINONE_SERIALIZER
@@ -222,8 +230,10 @@ struct Printer< ::custom_messages::MoveGripperCommand_<ContainerAllocator> >
     Printer< ::std_msgs::Header_<ContainerAllocator> >::stream(s, indent + "  ", v.header);
     s << indent << "robot_name: ";
     Printer<std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::stream(s, indent + "  ", v.robot_name);
-    s << indent << "cmd: ";
-    Printer<std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::stream(s, indent + "  ", v.cmd);
+    s << indent << "command_id: ";
+    Printer<std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::stream(s, indent + "  ", v.command_id);
+    s << indent << "command: ";
+    Printer<std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::stream(s, indent + "  ", v.command);
   }
 };
 

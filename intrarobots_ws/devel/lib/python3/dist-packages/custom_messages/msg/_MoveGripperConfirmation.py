@@ -9,12 +9,12 @@ import struct
 import std_msgs.msg
 
 class MoveGripperConfirmation(genpy.Message):
-  _md5sum = "bf37a5a5bd1d5d54d0cd95b0a2f2076c"
+  _md5sum = "d1e861f7b9dd4217596bf13b98116564"
   _type = "custom_messages/MoveGripperConfirmation"
   _has_header = True  # flag to mark the presence of a Header object
   _full_text = """Header header
 string robot_name
-uint32 command_seq
+string command_id
 bool success
 
 ================================================================================
@@ -33,8 +33,8 @@ time stamp
 #Frame this data is associated with
 string frame_id
 """
-  __slots__ = ['header','robot_name','command_seq','success']
-  _slot_types = ['std_msgs/Header','string','uint32','bool']
+  __slots__ = ['header','robot_name','command_id','success']
+  _slot_types = ['std_msgs/Header','string','string','bool']
 
   def __init__(self, *args, **kwds):
     """
@@ -44,7 +44,7 @@ string frame_id
     changes.  You cannot mix in-order arguments and keyword arguments.
 
     The available fields are:
-       header,robot_name,command_seq,success
+       header,robot_name,command_id,success
 
     :param args: complete set of field values, in .msg order
     :param kwds: use keyword arguments corresponding to message field names
@@ -57,14 +57,14 @@ string frame_id
         self.header = std_msgs.msg.Header()
       if self.robot_name is None:
         self.robot_name = ''
-      if self.command_seq is None:
-        self.command_seq = 0
+      if self.command_id is None:
+        self.command_id = ''
       if self.success is None:
         self.success = False
     else:
       self.header = std_msgs.msg.Header()
       self.robot_name = ''
-      self.command_seq = 0
+      self.command_id = ''
       self.success = False
 
   def _get_types(self):
@@ -93,8 +93,14 @@ string frame_id
         _x = _x.encode('utf-8')
         length = len(_x)
       buff.write(struct.Struct('<I%ss'%length).pack(length, _x))
-      _x = self
-      buff.write(_get_struct_IB().pack(_x.command_seq, _x.success))
+      _x = self.command_id
+      length = len(_x)
+      if python3 or type(_x) == unicode:
+        _x = _x.encode('utf-8')
+        length = len(_x)
+      buff.write(struct.Struct('<I%ss'%length).pack(length, _x))
+      _x = self.success
+      buff.write(_get_struct_B().pack(_x))
     except struct.error as se: self._check_types(struct.error("%s: '%s' when writing '%s'" % (type(se), str(se), str(locals().get('_x', self)))))
     except TypeError as te: self._check_types(ValueError("%s: '%s' when writing '%s'" % (type(te), str(te), str(locals().get('_x', self)))))
 
@@ -131,10 +137,18 @@ string frame_id
         self.robot_name = str[start:end].decode('utf-8', 'rosmsg')
       else:
         self.robot_name = str[start:end]
-      _x = self
       start = end
-      end += 5
-      (_x.command_seq, _x.success,) = _get_struct_IB().unpack(str[start:end])
+      end += 4
+      (length,) = _struct_I.unpack(str[start:end])
+      start = end
+      end += length
+      if python3:
+        self.command_id = str[start:end].decode('utf-8', 'rosmsg')
+      else:
+        self.command_id = str[start:end]
+      start = end
+      end += 1
+      (self.success,) = _get_struct_B().unpack(str[start:end])
       self.success = bool(self.success)
       return self
     except struct.error as e:
@@ -162,8 +176,14 @@ string frame_id
         _x = _x.encode('utf-8')
         length = len(_x)
       buff.write(struct.Struct('<I%ss'%length).pack(length, _x))
-      _x = self
-      buff.write(_get_struct_IB().pack(_x.command_seq, _x.success))
+      _x = self.command_id
+      length = len(_x)
+      if python3 or type(_x) == unicode:
+        _x = _x.encode('utf-8')
+        length = len(_x)
+      buff.write(struct.Struct('<I%ss'%length).pack(length, _x))
+      _x = self.success
+      buff.write(_get_struct_B().pack(_x))
     except struct.error as se: self._check_types(struct.error("%s: '%s' when writing '%s'" % (type(se), str(se), str(locals().get('_x', self)))))
     except TypeError as te: self._check_types(ValueError("%s: '%s' when writing '%s'" % (type(te), str(te), str(locals().get('_x', self)))))
 
@@ -201,10 +221,18 @@ string frame_id
         self.robot_name = str[start:end].decode('utf-8', 'rosmsg')
       else:
         self.robot_name = str[start:end]
-      _x = self
       start = end
-      end += 5
-      (_x.command_seq, _x.success,) = _get_struct_IB().unpack(str[start:end])
+      end += 4
+      (length,) = _struct_I.unpack(str[start:end])
+      start = end
+      end += length
+      if python3:
+        self.command_id = str[start:end].decode('utf-8', 'rosmsg')
+      else:
+        self.command_id = str[start:end]
+      start = end
+      end += 1
+      (self.success,) = _get_struct_B().unpack(str[start:end])
       self.success = bool(self.success)
       return self
     except struct.error as e:
@@ -220,9 +248,9 @@ def _get_struct_3I():
     if _struct_3I is None:
         _struct_3I = struct.Struct("<3I")
     return _struct_3I
-_struct_IB = None
-def _get_struct_IB():
-    global _struct_IB
-    if _struct_IB is None:
-        _struct_IB = struct.Struct("<IB")
-    return _struct_IB
+_struct_B = None
+def _get_struct_B():
+    global _struct_B
+    if _struct_B is None:
+        _struct_B = struct.Struct("<B")
+    return _struct_B

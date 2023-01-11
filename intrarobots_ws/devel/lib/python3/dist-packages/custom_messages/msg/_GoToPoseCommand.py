@@ -10,11 +10,12 @@ import geometry_msgs.msg
 import std_msgs.msg
 
 class GoToPoseCommand(genpy.Message):
-  _md5sum = "05eddb1fda3dba35a09c800d8d38c1ae"
+  _md5sum = "1b4f85f247f494474e3eb1a08aaaa2cb"
   _type = "custom_messages/GoToPoseCommand"
   _has_header = True  # flag to mark the presence of a Header object
   _full_text = """Header header
 string robot_name
+string command_id
 geometry_msgs/Pose target_pose
 
 ================================================================================
@@ -55,8 +56,8 @@ float64 y
 float64 z
 float64 w
 """
-  __slots__ = ['header','robot_name','target_pose']
-  _slot_types = ['std_msgs/Header','string','geometry_msgs/Pose']
+  __slots__ = ['header','robot_name','command_id','target_pose']
+  _slot_types = ['std_msgs/Header','string','string','geometry_msgs/Pose']
 
   def __init__(self, *args, **kwds):
     """
@@ -66,7 +67,7 @@ float64 w
     changes.  You cannot mix in-order arguments and keyword arguments.
 
     The available fields are:
-       header,robot_name,target_pose
+       header,robot_name,command_id,target_pose
 
     :param args: complete set of field values, in .msg order
     :param kwds: use keyword arguments corresponding to message field names
@@ -79,11 +80,14 @@ float64 w
         self.header = std_msgs.msg.Header()
       if self.robot_name is None:
         self.robot_name = ''
+      if self.command_id is None:
+        self.command_id = ''
       if self.target_pose is None:
         self.target_pose = geometry_msgs.msg.Pose()
     else:
       self.header = std_msgs.msg.Header()
       self.robot_name = ''
+      self.command_id = ''
       self.target_pose = geometry_msgs.msg.Pose()
 
   def _get_types(self):
@@ -107,6 +111,12 @@ float64 w
         length = len(_x)
       buff.write(struct.Struct('<I%ss'%length).pack(length, _x))
       _x = self.robot_name
+      length = len(_x)
+      if python3 or type(_x) == unicode:
+        _x = _x.encode('utf-8')
+        length = len(_x)
+      buff.write(struct.Struct('<I%ss'%length).pack(length, _x))
+      _x = self.command_id
       length = len(_x)
       if python3 or type(_x) == unicode:
         _x = _x.encode('utf-8')
@@ -152,6 +162,15 @@ float64 w
         self.robot_name = str[start:end].decode('utf-8', 'rosmsg')
       else:
         self.robot_name = str[start:end]
+      start = end
+      end += 4
+      (length,) = _struct_I.unpack(str[start:end])
+      start = end
+      end += length
+      if python3:
+        self.command_id = str[start:end].decode('utf-8', 'rosmsg')
+      else:
+        self.command_id = str[start:end]
       _x = self
       start = end
       end += 56
@@ -177,6 +196,12 @@ float64 w
         length = len(_x)
       buff.write(struct.Struct('<I%ss'%length).pack(length, _x))
       _x = self.robot_name
+      length = len(_x)
+      if python3 or type(_x) == unicode:
+        _x = _x.encode('utf-8')
+        length = len(_x)
+      buff.write(struct.Struct('<I%ss'%length).pack(length, _x))
+      _x = self.command_id
       length = len(_x)
       if python3 or type(_x) == unicode:
         _x = _x.encode('utf-8')
@@ -223,6 +248,15 @@ float64 w
         self.robot_name = str[start:end].decode('utf-8', 'rosmsg')
       else:
         self.robot_name = str[start:end]
+      start = end
+      end += 4
+      (length,) = _struct_I.unpack(str[start:end])
+      start = end
+      end += length
+      if python3:
+        self.command_id = str[start:end].decode('utf-8', 'rosmsg')
+      else:
+        self.command_id = str[start:end]
       _x = self
       start = end
       end += 56

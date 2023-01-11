@@ -1,4 +1,4 @@
 Header header
 string robot_name
-uint32 command_seq
+string command_id
 bool success

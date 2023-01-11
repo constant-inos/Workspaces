@@ -27,13 +27,13 @@ struct GoToPoseConfirmation_
   GoToPoseConfirmation_()
     : header()
     , robot_name()
-    , command_seq(0)
+    , command_id()
     , success(false)  {
     }
   GoToPoseConfirmation_(const ContainerAllocator& _alloc)
     : header(_alloc)
     , robot_name(_alloc)
-    , command_seq(0)
+    , command_id(_alloc)
     , success(false)  {
   (void)_alloc;
     }
@@ -46,8 +46,8 @@ struct GoToPoseConfirmation_
    typedef std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>> _robot_name_type;
   _robot_name_type robot_name;
 
-   typedef uint32_t _command_seq_type;
-  _command_seq_type command_seq;
+   typedef std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>> _command_id_type;
+  _command_id_type command_id;
 
    typedef uint8_t _success_type;
   _success_type success;
@@ -83,7 +83,7 @@ bool operator==(const ::custom_messages::GoToPoseConfirmation_<ContainerAllocato
 {
   return lhs.header == rhs.header &&
     lhs.robot_name == rhs.robot_name &&
-    lhs.command_seq == rhs.command_seq &&
+    lhs.command_id == rhs.command_id &&
     lhs.success == rhs.success;
 }
 
@@ -141,12 +141,12 @@ struct MD5Sum< ::custom_messages::GoToPoseConfirmation_<ContainerAllocator> >
 {
   static const char* value()
   {
-    return "bf37a5a5bd1d5d54d0cd95b0a2f2076c";
+    return "d1e861f7b9dd4217596bf13b98116564";
   }
 
   static const char* value(const ::custom_messages::GoToPoseConfirmation_<ContainerAllocator>&) { return value(); }
-  static const uint64_t static_value1 = 0xbf37a5a5bd1d5d54ULL;
-  static const uint64_t static_value2 = 0xd0cd95b0a2f2076cULL;
+  static const uint64_t static_value1 = 0xd1e861f7b9dd4217ULL;
+  static const uint64_t static_value2 = 0x596bf13b98116564ULL;
 };
 
 template<class ContainerAllocator>
@@ -167,7 +167,7 @@ struct Definition< ::custom_messages::GoToPoseConfirmation_<ContainerAllocator> 
   {
     return "Header header\n"
 "string robot_name\n"
-"uint32 command_seq\n"
+"string command_id\n"
 "bool success\n"
 "\n"
 "================================================================================\n"
@@ -205,7 +205,7 @@ namespace serialization
     {
       stream.next(m.header);
       stream.next(m.robot_name);
-      stream.next(m.command_seq);
+      stream.next(m.command_id);
       stream.next(m.success);
     }
 
@@ -230,8 +230,8 @@ struct Printer< ::custom_messages::GoToPoseConfirmation_<ContainerAllocator> >
     Printer< ::std_msgs::Header_<ContainerAllocator> >::stream(s, indent + "  ", v.header);
     s << indent << "robot_name: ";
     Printer<std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::stream(s, indent + "  ", v.robot_name);
-    s << indent << "command_seq: ";
-    Printer<uint32_t>::stream(s, indent + "  ", v.command_seq);
+    s << indent << "command_id: ";
+    Printer<std::basic_string<char, std::char_traits<char>, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::stream(s, indent + "  ", v.command_id);
     s << indent << "success: ";
     Printer<uint8_t>::stream(s, indent + "  ", v.success);
   }

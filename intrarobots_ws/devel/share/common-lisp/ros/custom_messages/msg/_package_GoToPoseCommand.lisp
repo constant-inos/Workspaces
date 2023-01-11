@@ -3,6 +3,8 @@
           HEADER
           ROBOT_NAME-VAL
           ROBOT_NAME
+          COMMAND_ID-VAL
+          COMMAND_ID
           TARGET_POSE-VAL
           TARGET_POSE
 ))
