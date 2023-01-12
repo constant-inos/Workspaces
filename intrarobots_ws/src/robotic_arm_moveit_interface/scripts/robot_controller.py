@@ -296,7 +296,9 @@ def main():
     
     rospy.spin()
 
-sub = rospy.Subscriber("/"+ROBOT_NAME+"/camera_link_optical/image_raw", Image, read_camera) # Camera sensor, Image is the data type sensor_msgs/Image
+COLOR_IMAGE_TOPIC = '/camera/color/image_raw'
+
+sub = rospy.Subscriber(COLOR_IMAGE_TOPIC, Image, read_camera) # Camera sensor, Image is the data type sensor_msgs/Image
 sub2 = rospy.Subscriber("/"+ROBOT_NAME+"/move_group/result", MoveGroupActionResult, execution_status)
 
 if __name__ == "__main__":
