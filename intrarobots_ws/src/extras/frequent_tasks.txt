@@ -35,3 +35,10 @@ controllers
 extrernal_urdfs
 world
 moveit_python_interface
+
+------------------------------------------------------------------------------------
+ -- roslaunch master xsarm_moveit_interface.launch robot_model:=panda dof:='panda_' base_link_frame:='panda_link0' use_gazebo:=true use_python_interface:=true external_urdf_loc:="/home/karagk/Workspaces/intrarobots_ws/src/extras/extrernal_urdfs/camera_depth.xacro"
+ -- rosservice call /gazebo/unpause_physics
+ -- rosrun robotic_arm_moveit_interface robot_controller.py
+------------------------------------------------------------------------------------
+
