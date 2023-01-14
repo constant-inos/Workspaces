@@ -10,6 +10,7 @@ project(robotic_arm_gazebo)
 find_package(catkin REQUIRED COMPONENTS
   controller_manager
   effort_controllers
+  franka_description
   gazebo_ros
   gazebo_ros_control
   joint_state_controller
@@ -109,7 +110,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES robotic_arm_gazebo
-#  CATKIN_DEPENDS controller_manager effort_controllers gazebo_ros gazebo_ros_control joint_state_controller joint_trajectory_controller robotic_arm_descriptions
+#  CATKIN_DEPENDS controller_manager effort_controllers franka_description gazebo_ros gazebo_ros_control joint_state_controller joint_trajectory_controller robotic_arm_descriptions
 #  DEPENDS system_lib
 )
 

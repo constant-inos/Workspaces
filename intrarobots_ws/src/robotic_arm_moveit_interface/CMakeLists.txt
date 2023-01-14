@@ -8,6 +8,7 @@ project(robotic_arm_moveit_interface)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  custom_messages
   geometry_msgs
   message_generation
   moveit_commander
@@ -55,11 +56,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 # add_message_files(
 #   FILES
-#   go_to_pose_command.msg
-#   go_to_pose_confirmation.msg
-#   move_gripper_command.msg
-#   move_gripper_confirmation.msg
-#   )
+#   Message1.msg
+#   Message2.msg
+# )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -76,11 +75,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
- generate_messages(
-   DEPENDENCIES
-   geometry_msgs
-   std_msgs
- )
+# generate_messages(
+#   DEPENDENCIES
+#   geometry_msgs#   std_msgs
+# )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -114,7 +112,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES robotic_arm_moveit_interface
-  CATKIN_DEPENDS geometry_msgs message_generation moveit_commander moveit_ros_planning_interface moveit_visual_tools roscpp rospy std_msgs tf message_runtime
+#  CATKIN_DEPENDS custom_messages geometry_msgs message_generation moveit_commander moveit_ros_planning_interface moveit_visual_tools roscpp rospy std_msgs tf
 #  DEPENDS system_lib
 )
 

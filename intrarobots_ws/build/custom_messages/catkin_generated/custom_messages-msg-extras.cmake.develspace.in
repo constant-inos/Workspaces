@@ -1,2 +1,0 @@
-set(custom_messages_MESSAGE_FILES "/home/karagk/Workspaces/intrarobots_ws/src/custom_messages/msg/GoToPoseCommand.msg;/home/karagk/Workspaces/intrarobots_ws/src/custom_messages/msg/GoToPoseConfirmation.msg;/home/karagk/Workspaces/intrarobots_ws/src/custom_messages/msg/MoveGripperCommand.msg;/home/karagk/Workspaces/intrarobots_ws/src/custom_messages/msg/MoveGripperConfirmation.msg")
-set(custom_messages_SERVICE_FILES "")

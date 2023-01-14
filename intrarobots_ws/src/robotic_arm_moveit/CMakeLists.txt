@@ -8,8 +8,6 @@ project(robotic_arm_moveit)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  interbotix_xsarm_descriptions
-  interbotix_xsarm_gazebo
   joint_state_publisher
   moveit_fake_controller_manager
   moveit_kinematics
@@ -19,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_setup_assistant
   moveit_simple_controller_manager
   robot_state_publisher
+  robotic_arm_gazebo
   xacro
 )
 
@@ -114,7 +113,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES robotic_arm_moveit
-#  CATKIN_DEPENDS interbotix_xsarm_descriptions interbotix_xsarm_gazebo joint_state_publisher moveit_fake_controller_manager moveit_kinematics moveit_planners_ompl moveit_ros_move_group moveit_ros_visualization moveit_setup_assistant moveit_simple_controller_manager robot_state_publisher xacro
+#  CATKIN_DEPENDS joint_state_publisher moveit_fake_controller_manager moveit_kinematics moveit_planners_ompl moveit_ros_move_group moveit_ros_visualization moveit_setup_assistant moveit_simple_controller_manager robot_state_publisher robotic_arm_gazebo xacro
 #  DEPENDS system_lib
 )
 
