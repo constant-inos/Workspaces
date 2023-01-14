@@ -1,10 +1,27 @@
 /home/ntinos/Workspaces/intrarobots_ws/build
 /home/ntinos/Workspaces/intrarobots_ws/devel
+/home/ntinos/Workspaces/intrarobots_ws/.catkin_workspace
 
 /home/ntinos/Workspaces/intrarobots_ws/src/CMakeLists.txt
 
-/home/ntinos/Workspaces/intrarobots_ws/src/franka_description/CMakeLists.txt
-/home/ntinos/Workspaces/intrarobots_ws/src/franka_description/package.xml
+/home/ntinos/Workspaces/intrarobots_ws/src/robotic_arm_moveit_interface/CMakeLists.txt
+/home/ntinos/Workspaces/intrarobots_ws/src/robotic_arm_moveit_interface/package.xml
+
+/home/ntinos/Workspaces/intrarobots_ws/src/robotic_arm_moveit/CMakeLists.txt
+/home/ntinos/Workspaces/intrarobots_ws/src/robotic_arm_moveit/package.xml
+
+/home/ntinos/Workspaces/intrarobots_ws/src/robotic_arm_gazebo/CMakeLists.txt
+/home/ntinos/Workspaces/intrarobots_ws/src/robotic_arm_gazebo/package.xml
+
+/home/ntinos/Workspaces/intrarobots_ws/src/robotic_arm_descriptions/CMakeLists.txt
+/home/ntinos/Workspaces/intrarobots_ws/src/robotic_arm_descriptions/package.xml
+
+/home/ntinos/Workspaces/intrarobots_ws/src/master/CMakeLists.txt
+/home/ntinos/Workspaces/intrarobots_ws/src/master/package.xml
 
 /home/ntinos/Workspaces/intrarobots_ws/src/franka_description/CMakeLists.txt
 /home/ntinos/Workspaces/intrarobots_ws/src/franka_description/package.xml
+
+/home/ntinos/Workspaces/intrarobots_ws/src/custom_messages/CMakeLists.txt
+/home/ntinos/Workspaces/intrarobots_ws/src/custom_messages/package.xml
+

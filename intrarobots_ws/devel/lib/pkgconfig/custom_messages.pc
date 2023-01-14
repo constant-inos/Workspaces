@@ -1,0 +1,8 @@
+prefix=/home/ntinos/Workspaces/intrarobots_ws/devel
+
+Name: custom_messages
+Description: Description of custom_messages
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
