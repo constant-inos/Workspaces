@@ -4,7 +4,7 @@
 
 **/src/CMakeLists.txt
 
-**/src/*/CMakeLists.txt
+# **/src/*/CMakeLists.txt
 **/src/*/package.xml
 
 # intrarobots_ws/src/robotic_arm_moveit_interface/CMakeLists.txt
