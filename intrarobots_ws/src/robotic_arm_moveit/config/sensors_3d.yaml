@@ -1,5 +1,5 @@
 # The name of this file shouldn't be changed, or else the Setup Assistant won't detect it
-sensors: 
+sensors:
   - sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
     point_cloud_topic: /camera/depth/points
     max_range: 5.0

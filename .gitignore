@@ -7,25 +7,5 @@
 **/src/*/CMakeLists.txt
 **/src/*/package.xml
 
-# intrarobots_ws/src/robotic_arm_moveit_interface/CMakeLists.txt
-# intrarobots_ws/src/robotic_arm_moveit_interface/package.xml
-
-# intrarobots_ws/src/robotic_arm_moveit/CMakeLists.txt
-# intrarobots_ws/src/robotic_arm_moveit/package.xml
-
-# intrarobots_ws/src/robotic_arm_gazebo/CMakeLists.txt
-# intrarobots_ws/src/robotic_arm_gazebo/package.xml
-
-# intrarobots_ws/src/robotic_arm_descriptions/CMakeLists.txt
-# intrarobots_ws/src/robotic_arm_descriptions/package.xml
-
-# intrarobots_ws/src/master/CMakeLists.txt
-# intrarobots_ws/src/master/package.xml
-
-# intrarobots_ws/src/franka_description/CMakeLists.txt
-# intrarobots_ws/src/franka_description/package.xml
-
-# intrarobots_ws/src/custom_messages/CMakeLists.txt
-# intrarobots_ws/src/custom_messages/package.xml
 
 
