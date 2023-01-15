@@ -4,7 +4,7 @@
 
 **/src/CMakeLists.txt
 
-**/src/*/CMakeLists.txt
+# **/src/*/CMakeLists.txt
 **/src/*/package.xml
 
 
