@@ -28,6 +28,139 @@ ROBOT_NAME = 'panda'
 go_to_pose_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/go_to_pose_command",GoToPoseCommand,queue_size=1)
 move_gripper_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/move_gripper_command",MoveGripperCommand,queue_size=1)
 
+class Master:
+    def __init__(self):
+        self.ptc1 = -1
+        self.ptc2 = -1
+        self.transformation = np.eye(4)
+        self.i1 = 0
+        self.i2 = 0
+
+    def create_transformation(self):
+        T = np.eye(4)
+        T[:3, :3] = self.ptc1.get_rotation_matrix_from_xyz((0 , 0, np.pi ))
+        # T[0, 3] = 1.6
+        # T[1, 3] = 0
+        # T[0,2] = 1.6
+        self.transformation = T
+
+
+    def combine_ptcs(self):
+        
+        # if self.ptc2 == -1 and self.ptc1 == -1:
+        #     return "No Point Clouds Available"
+        # elif self.ptc1 == -1:
+        #     print("1821")
+        #     return #self.ptc2
+        # elif self.ptc2 == -1:
+        #     print("1822")
+        #     return #self.ptc1
+        
+        print("Combining Point Clouds")
+        self.create_transformation()
+
+        ptc1 = self.ptc1
+        ptc2 = self.ptc2
+        # ptc1.paint_uniform_color([1, 0.706, 0])
+        # ptc2.paint_uniform_color([0, 0.651, 0.929])
+        ptc1.transform(self.transformation)
+        open3d.visualization.draw_geometries([ptc1, ptc2])
+
+    def read_camera1(self,msg):
+        self.i1 += 1
+        self.ptc1 = self.pt2_to_o3d(msg)
+        print("Camera 1 readings:",self.i1,", Camera 2 readings:",self.i2)
+
+    def read_camera2(self,msg):
+        self.i2 += 1
+        self.ptc2 = self.pt2_to_o3d(msg)
+
+        if self.i1 > 1 and self.i2 > 1:
+            print("Syka Blyat")
+            self.combine_ptcs()
+
+    def pt2_to_o3d(self,msg):
+
+        FIELDS_XYZ = [
+            PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+            PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+            PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
+        ]
+        FIELDS_XYZRGB = FIELDS_XYZ + [
+                PointField(name='b', offset=16, datatype=PointField.UINT8, count=1),
+                PointField(name='g', offset=17, datatype=PointField.UINT8, count=1),
+                PointField(name='r', offset=18, datatype=PointField.UINT8, count=1),
+            ]
+        
+        msg.fields = FIELDS_XYZRGB
+
+        points = point_cloud2.read_points(msg,skip_nans=True)
+
+        xyz = []
+        rgb = []
+        red_objects_3d = []
+        green_objects_3d = []
+
+        max_z = 0
+        min_z = 100
+
+        for p in points:
+            x,y,z,b,g,r = p      
+
+            # table_z = 0.684
+            # if (x > -0.45 and x < 0.45) and ( y > -0.45 and y < 0.45):# and ( z<0.684 and z>0.55):
+            xyz.append((x,y,z))
+            rgb.append((r,g,b))         
+
+            if is_red(r,g,b): 
+                red_objects_3d.append((x,y,z))
+            if is_green(r,g,b): 
+                green_objects_3d.append((x,y,z))
+
+        if len(xyz)==0:
+            print("Zero Points")
+            return
+        # print("Total Points:",len(xyz))
+        # print("Red Points:  ",len(red_objects_3d))
+        # print("Green Points:",len(green_objects_3d))
+
+
+        # CREATE AN OPEN3D POINT CLOUD OF THE WORLD
+        open3d_cloud = open3d.geometry.PointCloud()
+        open3d_cloud.points = open3d.utility.Vector3dVector(np.array(xyz))
+        open3d_cloud.colors = open3d.utility.Vector3dVector(np.array(rgb)/255.0) 
+
+        # open3d_cloud.estimate_normals()
+        # open3d.visualization.draw_geometries([open3d_cloud])
+        return open3d_cloud
+        # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE RED POINTS
+        if len(red_objects_3d) > 0:
+            reds = open3d.geometry.PointCloud()
+            reds.points = open3d.utility.Vector3dVector(np.array(red_objects_3d))
+            red_objects = cluster_objects_3d(reds)
+
+        # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE GREEN POINTS
+        if len(green_objects_3d)>0:
+            greens = open3d.geometry.PointCloud()
+            greens.points = open3d.utility.Vector3dVector(np.array(green_objects_3d))
+            green_objects = cluster_objects_3d(greens)
+
+        objects = green_objects + red_objects
+
+        if len(objects) > 0:
+            for o in objects: o.estimate_normals()
+            open3d.visualization.draw_geometries(objects)  
+
+        # open3d.visualization.draw_geometries([open3d_cloud])
+
+        # hand_mesh = open3d.io.read_triangle_mesh('/home/karagk/Workspaces/intrarobots_ws/src/franka_description/meshes/collision/finger.stl')
+        # open3d.visualization.draw_geometries([hand_mesh])
+
+        return open3d_cloud
+
+
+        
+
 def create_pose_msg(pose_goal_raw):
     quat = quaternion_from_euler(pose_goal_raw[3], pose_goal_raw[4], pose_goal_raw[5])
     pose = geometry_msgs.msg.Pose()
@@ -351,84 +484,6 @@ def read_point_cloud2(msg):
             i +=1
     return image
 
-def pt2_to_o3d(msg):
-
-    FIELDS_XYZ = [
-        PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
-        PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
-        PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
-    ]
-    FIELDS_XYZRGB = FIELDS_XYZ + [
-            PointField(name='b', offset=16, datatype=PointField.UINT8, count=1),
-            PointField(name='g', offset=17, datatype=PointField.UINT8, count=1),
-            PointField(name='r', offset=18, datatype=PointField.UINT8, count=1),
-        ]
-    
-    msg.fields = FIELDS_XYZRGB
-
-    points = point_cloud2.read_points(msg,skip_nans=True)
-
-    xyz = []
-    rgb = []
-    red_objects_3d = []
-    green_objects_3d = []
-
-    max_z = 0
-    min_z = 100
-
-    for p in points:
-        x,y,z,b,g,r = p      
-
-        # table_z = 0.684
-        # if (x > -0.45 and x < 0.45) and ( y > -0.45 and y < 0.45):# and ( z<0.684 and z>0.55):
-        xyz.append((x,y,z))
-        rgb.append((r,g,b))         
-
-        if is_red(r,g,b): 
-            red_objects_3d.append((x,y,z))
-        if is_green(r,g,b): 
-            green_objects_3d.append((x,y,z))
-
-    if len(xyz)==0:
-        print("Zero Points")
-        return
-    print("Total Points:",len)
-    print("Red Points:  ",len(red_objects_3d))
-    print("Green Points:",len(green_objects_3d))
-
-
-    # CREATE AN OPEN3D POINT CLOUD OF THE WORLD
-    open3d_cloud = open3d.geometry.PointCloud()
-    open3d_cloud.points = open3d.utility.Vector3dVector(np.array(xyz))
-    open3d_cloud.colors = open3d.utility.Vector3dVector(np.array(rgb)/255.0) 
-
-    # open3d_cloud.estimate_normals()
-    open3d.visualization.draw_geometries([open3d_cloud])
-    return
-    # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE RED POINTS
-    if len(red_objects_3d) > 0:
-        reds = open3d.geometry.PointCloud()
-        reds.points = open3d.utility.Vector3dVector(np.array(red_objects_3d))
-        red_objects = cluster_objects_3d(reds)
-
-    # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE GREEN POINTS
-    if len(green_objects_3d)>0:
-        greens = open3d.geometry.PointCloud()
-        greens.points = open3d.utility.Vector3dVector(np.array(green_objects_3d))
-        green_objects = cluster_objects_3d(greens)
-
-    objects = green_objects + red_objects
-
-    if len(objects) > 0:
-        for o in objects: o.estimate_normals()
-        open3d.visualization.draw_geometries(objects)  
-
-    # open3d.visualization.draw_geometries([open3d_cloud])
-
-    # hand_mesh = open3d.io.read_triangle_mesh('/home/karagk/Workspaces/intrarobots_ws/src/franka_description/meshes/collision/finger.stl')
-    # open3d.visualization.draw_geometries([hand_mesh])
-
-    return open3d_cloud
 
 def cluster_objects_3d(point_cloud):
     cluster_ind = np.array( point_cloud.cluster_dbscan(eps=0.1,min_points=4) )
@@ -468,15 +523,19 @@ from moveit_msgs.msg import MoveGroupActionResult
 from actionlib_msgs.msg import GoalStatus
 import time
 
+master = Master()
+
 def main():
     rospy.init_node('robot_state_publisher') #this is an existing topic
     
     rospy.spin()
 
 COLOR_IMAGE_TOPIC = '/camera/color/image_raw'
-POINT_CLOUD_TOPIC = '/camera/depth/points'
+POINT_CLOUD_TOPIC1 = '/camera/depth/points'
+POINT_CLOUD_TOPIC2 = '/camera2/depth/points'
 
-point_cloud_subscriber = rospy.Subscriber(POINT_CLOUD_TOPIC, PointCloud2, get_point_cloud)
+point_cloud_subscriber1 = rospy.Subscriber(POINT_CLOUD_TOPIC1, PointCloud2, master.read_camera1)
+point_cloud_subscriber2 = rospy.Subscriber(POINT_CLOUD_TOPIC2, PointCloud2, master.read_camera2)
 # sub = rospy.Subscriber(COLOR_IMAGE_TOPIC, Image, read_camera) # Camera sensor, Image is the data type sensor_msgs/Image
 # sub2 = rospy.Subscriber("/"+ROBOT_NAME+"/move_group/result", MoveGroupActionResult, execution_status)
 
