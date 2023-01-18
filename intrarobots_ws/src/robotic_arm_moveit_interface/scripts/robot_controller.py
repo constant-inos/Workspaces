@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 import rospy
-from sensor_msgs.msg import LaserScan, Range, Image, JointState
+from sensor_msgs.msg import LaserScan, Range, Image, JointState, PointCloud2, PointField
+from sensor_msgs import point_cloud2
 from control_msgs.msg import JointTrajectoryControllerState
 from std_msgs.msg import String
 from std_msgs.msg import Float64
@@ -14,6 +15,10 @@ from cv_bridge import CvBridge
 import random
 from tf.transformations import quaternion_from_euler
 from custom_messages.msg import *
+import open3d
+import struct
+import colorsys
+from sklearn.cluster import DBSCAN
 
 bridge = CvBridge()
 exev_status_code = 0
@@ -217,6 +222,23 @@ def pixel2coords(px,py,H=480,W=640):
 
     return x,y
 
+def is_red(r,g,b):
+    r,g,b = r/255.0,b/255.0,g/255.0
+    (h,s,v) = colorsys.rgb_to_hsv(r,g,b)
+    (h,s,v) = (h*180,s*255,v*255)
+
+    c1 = (h<10) and (s>50) and (v>50)
+    c2 = (h>170 and h<=180) and (s>50) and (v>50)
+
+    return (c1 or c2)
+
+def is_green(r,g,b):
+    r,g,b = r/255.0,g/255.0,b/255.0
+    (h,s,v) = colorsys.rgb_to_hsv(r,g,b)
+    (h,s,v) = (h*180,s*255,v*255)
+
+    return ((h>=40 and h<=70) and (s>40) and (v>40))
+        
 q = []
 busy = False
 standby_pose = (0.5,0.0,0.4)
@@ -229,16 +251,16 @@ def read_camera(msg):
     C=0.025/14.0
     cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
     #print("Capturing image...")
-    objects = get_objects_position(cv_image)
+    print(cv_image.shape)
 
+    objects = get_objects_position(cv_image)
+    
     busy = True
     for o in objects:
+        print(o)
         success = get_object(o[0],o[1])
 
     busy = False
-    sub.unregister()
-    sub2.unregister()
-    main()
 
 def get_object(obj_pixels,color):
 
@@ -286,6 +308,146 @@ def execution_status(msg):
     print('exec_status')
     return exev_status_text, exec_status_code
 
+def read_point_cloud2(msg):
+    height = msg.height # how many rows in the data
+    width = msg.width # how many points in a row
+    point_step = msg.point_step # how many bytes in a point
+    row_step = msg.row_step # how many bytes in a row
+    data = msg.data
+    is_bigendian = msg.is_bigendian
+
+    image = np.zeros((height,width,3))
+    i = 0
+
+    for row in range(height):
+        for point in range(width):
+            offset = row * row_step + point * point_step
+
+            x_bytes = data[offset:offset+4]
+            x = struct.unpack('f',x_bytes)
+
+            y_bytes = data[offset+4:offset+8]
+            y = struct.unpack('f',y_bytes)
+            
+            z_bytes = data[offset+8:offset+16]
+            z = struct.unpack('ff',z_bytes)
+
+            b_bytes = data[offset+16:offset+17]
+            b = struct.unpack('B',b_bytes)
+            b = int(b[0])
+            
+            g_bytes = data[offset+17:offset+18]
+            g = struct.unpack('B',g_bytes)
+            g = int(g[0])
+
+            r_bytes = data[offset+18:offset+19]
+            r = struct.unpack('B',r_bytes)
+            r = int(r[0]) 
+
+            image[row,point,0] = b
+            image[row,point,1] = g
+            image[row,point,2] = r
+            # print(b,g,r)
+            i +=1
+    return image
+
+def pt2_to_o3d(msg):
+
+    FIELDS_XYZ = [
+        PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+        PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+        PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
+    ]
+    FIELDS_XYZRGB = FIELDS_XYZ + [
+            PointField(name='b', offset=16, datatype=PointField.UINT8, count=1),
+            PointField(name='g', offset=17, datatype=PointField.UINT8, count=1),
+            PointField(name='r', offset=18, datatype=PointField.UINT8, count=1),
+        ]
+    
+    msg.fields = FIELDS_XYZRGB
+
+    points = point_cloud2.read_points(msg,skip_nans=True)
+
+    xyz = []
+    rgb = []
+    red_objects_3d = []
+    green_objects_3d = []
+
+    max_z = 0
+    min_z = 100
+
+    for p in points:
+        x,y,z,b,g,r = p      
+
+        table_z = 0.684
+        if (x > -0.45 and x < 0.45) and ( y > -0.45 and y < 0.45) and ( z<0.684 and z>0.55):
+            xyz.append((x,y,z))
+            rgb.append((r,g,b))
+
+            if is_red(r,g,b): 
+                red_objects_3d.append((x,y,z))
+            if is_green(r,g,b): 
+                green_objects_3d.append((x,y,z))
+    
+    # CREATE AN OPEN3D POINT CLOUD OF THE WORLD
+    open3d_cloud = open3d.geometry.PointCloud()
+    open3d_cloud.points = open3d.utility.Vector3dVector(np.array(xyz))
+    open3d_cloud.colors = open3d.utility.Vector3dVector(np.array(rgb)/255.0) 
+    
+    print("Red Points:  ",len(red_objects_3d))
+    print("Green Points:",len(green_objects_3d))
+
+    # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE RED POINTS
+    if len(red_objects_3d) > 0:
+        reds = open3d.geometry.PointCloud()
+        reds.points = open3d.utility.Vector3dVector(np.array(red_objects_3d))
+        objects = cluster_objects_3d(reds)
+        open3d.visualization.draw_geometries([objects[0], objects[1]])
+
+        
+         
+    # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE GREEN POINTS
+    if len(green_objects_3d)>0:
+        greens = open3d.geometry.PointCloud()
+        greens.points = open3d.utility.Vector3dVector(np.array(green_objects_3d))
+
+    # open3d.visualization.draw_geometries([open3d_cloud])
+
+    return open3d_cloud
+
+def cluster_objects_3d(point_cloud):
+    cluster_ind = np.array( point_cloud.cluster_dbscan(eps=0.1,min_points=4) )
+    num_clusters = cluster_ind.max() + 1
+    all_points = np.array(point_cloud.points)
+
+    clusters = []
+
+    for i in range(num_clusters):
+        a = np.ones(cluster_ind.shape)
+        a[cluster_ind != i] = 0
+        
+        cluster_points = all_points[a==1]
+
+        cluster = open3d.geometry.PointCloud()
+        cluster.points = open3d.utility.Vector3dVector(cluster_points)
+        clusters.append(cluster)
+    
+    return clusters
+
+
+def get_point_cloud(msg):
+
+    # image = read_point_cloud2(msg)
+    o3d_cloud = pt2_to_o3d(msg)
+    # open3d.visualization.draw_geometries([reds,greens])
+    return
+    
+    image = image.astype(np.uint8)
+    objects = get_objects_position(image)
+
+    for o in objects:
+        print(o)
+        success = get_object(o[0],o[1])
 
 from moveit_msgs.msg import MoveGroupActionResult
 from actionlib_msgs.msg import GoalStatus
@@ -297,9 +459,11 @@ def main():
     rospy.spin()
 
 COLOR_IMAGE_TOPIC = '/camera/color/image_raw'
+POINT_CLOUD_TOPIC = '/camera/depth/points'
 
-sub = rospy.Subscriber(COLOR_IMAGE_TOPIC, Image, read_camera) # Camera sensor, Image is the data type sensor_msgs/Image
-sub2 = rospy.Subscriber("/"+ROBOT_NAME+"/move_group/result", MoveGroupActionResult, execution_status)
+point_cloud_subscriber = rospy.Subscriber(POINT_CLOUD_TOPIC, PointCloud2, get_point_cloud)
+# sub = rospy.Subscriber(COLOR_IMAGE_TOPIC, Image, read_camera) # Camera sensor, Image is the data type sensor_msgs/Image
+# sub2 = rospy.Subscriber("/"+ROBOT_NAME+"/move_group/result", MoveGroupActionResult, execution_status)
 
 if __name__ == "__main__":
     main()
