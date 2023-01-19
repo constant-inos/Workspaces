@@ -19,6 +19,7 @@ import open3d
 import struct
 import colorsys
 from sklearn.cluster import DBSCAN
+import time 
 
 bridge = CvBridge()
 exev_status_code = 0
@@ -32,44 +33,68 @@ class Master:
     def __init__(self):
         self.ptc1 = -1
         self.ptc2 = -1
+        self.ptc = -1
         self.transformation = np.eye(4)
         self.i1 = 0
         self.i2 = 0
 
     def create_transformation(self):
         T = np.eye(4)
-        T[:3, :3] = self.ptc1.get_rotation_matrix_from_xyz((0 , 0, np.pi ))
-        # T[0, 3] = 1.6
-        # T[1, 3] = 0
-        # T[0,2] = 1.6
+        rotation_matrix  = self.ptc1.get_rotation_matrix_from_xyz((3*np.pi/2, 0, 0))
+        a = 0.84*2/np.sqrt(2)
+        translation_vector = [0,-a,a]
+        T[:3, :3] = rotation_matrix
+        T[0:3,3] = translation_vector
         self.transformation = T
 
 
-    def combine_ptcs(self):
-        
-        # if self.ptc2 == -1 and self.ptc1 == -1:
-        #     return "No Point Clouds Available"
-        # elif self.ptc1 == -1:
-        #     print("1821")
-        #     return #self.ptc2
-        # elif self.ptc2 == -1:
-        #     print("1822")
-        #     return #self.ptc1
-        
+    def combine_ptcs(self,ptc1,ptc2):
+        t0 = time.time()
+
         print("Combining Point Clouds")
         self.create_transformation()
 
-        ptc1 = self.ptc1
-        ptc2 = self.ptc2
-        # ptc1.paint_uniform_color([1, 0.706, 0])
-        # ptc2.paint_uniform_color([0, 0.651, 0.929])
         ptc1.transform(self.transformation)
-        open3d.visualization.draw_geometries([ptc1, ptc2])
+        
+        points = list(ptc1.points) + list(ptc2.points)
+        colors = list(ptc1.colors) + list(ptc2.colors)
+
+        ptc = open3d.geometry.PointCloud()
+        ptc.points = open3d.utility.Vector3dVector(np.array(points))
+        ptc.colors = open3d.utility.Vector3dVector(np.array(colors)) 
+
+        print("Exec time for combine_ptc:",time.time()-t0)
+        return ptc
+
+    def get_red_objects(self,ptc):
+        t0 = time.time()
+
+        points = list(ptc.points)
+        colors = list(ptc.colors)
+
+        red_points = []
+        red_colors = []
+        for i in range(len(colors)):
+            r,g,b = colors[i]
+            r,g,b = 255*r,255*g,255*b
+            if is_red(r,g,b): 
+                red_points.append(points[i])
+                red_colors.append(colors[i])
+
+        ptc = open3d.geometry.PointCloud()
+        ptc.points = open3d.utility.Vector3dVector(np.array(red_points))
+        ptc.colors = open3d.utility.Vector3dVector(np.array(red_colors))
+
+        print("Exec time for get_red_objects:",time.time()-t0)
+        open3d.visualization.draw_geometries([ptc])
+        
+        return ptc
+
 
     def read_camera1(self,msg):
         self.i1 += 1
         self.ptc1 = self.pt2_to_o3d(msg)
-        print("Camera 1 readings:",self.i1,", Camera 2 readings:",self.i2)
+        # print("Camera 1 readings:",self.i1,", Camera 2 readings:",self.i2)
 
     def read_camera2(self,msg):
         self.i2 += 1
@@ -77,9 +102,13 @@ class Master:
 
         if self.i1 > 1 and self.i2 > 1:
             print("Syka Blyat")
-            self.combine_ptcs()
+            comb_ptc = self.combine_ptcs(self.ptc1,self.ptc2)
+            print("Syka Blyat 2")
+            self.get_red_objects(comb_ptc)
 
-    def pt2_to_o3d(self,msg):
+
+    def pt2_to_o3d(self,msg,scan_by_color=False):
+        t0 = time.time()
 
         FIELDS_XYZ = [
             PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
@@ -98,68 +127,53 @@ class Master:
 
         xyz = []
         rgb = []
-        red_objects_3d = []
-        green_objects_3d = []
-
-        max_z = 0
-        min_z = 100
+        red_objects_points = []
+        red_objects_colors = []
+        green_objects_points = []
+        green_objects_colors = []
 
         for p in points:
             x,y,z,b,g,r = p      
 
-            # table_z = 0.684
-            # if (x > -0.45 and x < 0.45) and ( y > -0.45 and y < 0.45):# and ( z<0.684 and z>0.55):
             xyz.append((x,y,z))
             rgb.append((r,g,b))         
 
-            if is_red(r,g,b): 
-                red_objects_3d.append((x,y,z))
-            if is_green(r,g,b): 
-                green_objects_3d.append((x,y,z))
-
-        if len(xyz)==0:
-            print("Zero Points")
-            return
-        # print("Total Points:",len(xyz))
-        # print("Red Points:  ",len(red_objects_3d))
-        # print("Green Points:",len(green_objects_3d))
-
+            if scan_by_color:
+                if is_red(r,g,b): 
+                    red_objects_points.append((x,y,z))
+                    red_objects_colors.append((r,g,b))
+                if is_green(r,g,b): 
+                    green_objects_points.append((x,y,z))
+                    green_objects_points.append((r,g,b))
 
         # CREATE AN OPEN3D POINT CLOUD OF THE WORLD
         open3d_cloud = open3d.geometry.PointCloud()
-        open3d_cloud.points = open3d.utility.Vector3dVector(np.array(xyz))
-        open3d_cloud.colors = open3d.utility.Vector3dVector(np.array(rgb)/255.0) 
+        if len(xyz)>0:
+            open3d_cloud.points = open3d.utility.Vector3dVector(np.array(xyz))
+            open3d_cloud.colors = open3d.utility.Vector3dVector(np.array(rgb)/255.0) 
+            # open3d_cloud.estimate_normals()   
+        else:
+            print("Zero Points Found")
 
-        # open3d_cloud.estimate_normals()
-        # open3d.visualization.draw_geometries([open3d_cloud])
-        return open3d_cloud
-        # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE RED POINTS
-        if len(red_objects_3d) > 0:
+        if scan_by_color:
+            # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE RED POINTS
             reds = open3d.geometry.PointCloud()
-            reds.points = open3d.utility.Vector3dVector(np.array(red_objects_3d))
-            red_objects = cluster_objects_3d(reds)
+            if len(red_objects_points) > 0:
+                reds.points = open3d.utility.Vector3dVector(np.array(red_objects_points))
+                reds.colors = open3d.utility.Vector3dVector(np.array(red_objects_colors))
 
-        # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE GREEN POINTS
-        if len(green_objects_3d)>0:
+            # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE GREEN POINTS
             greens = open3d.geometry.PointCloud()
-            greens.points = open3d.utility.Vector3dVector(np.array(green_objects_3d))
-            green_objects = cluster_objects_3d(greens)
+            if len(green_objects_points)>0:
+                greens.points = open3d.utility.Vector3dVector(np.array(green_objects_points))
+                greens.colors = open3d.utility.Vector3dVector(np.array(green_objects_colors))
 
-        objects = green_objects + red_objects
+        print("Exec time for pt2_to_o3d:",time.time()-t0)
+        if scan_by_color:
+            return open3d_cloud, reds, greens
+        else:   
+            return open3d_cloud
 
-        if len(objects) > 0:
-            for o in objects: o.estimate_normals()
-            open3d.visualization.draw_geometries(objects)  
-
-        # open3d.visualization.draw_geometries([open3d_cloud])
-
-        # hand_mesh = open3d.io.read_triangle_mesh('/home/karagk/Workspaces/intrarobots_ws/src/franka_description/meshes/collision/finger.stl')
-        # open3d.visualization.draw_geometries([hand_mesh])
-
-        return open3d_cloud
-
-
-        
 
 def create_pose_msg(pose_goal_raw):
     quat = quaternion_from_euler(pose_goal_raw[3], pose_goal_raw[4], pose_goal_raw[5])
@@ -356,17 +370,20 @@ def pixel2coords(px,py,H=480,W=640):
     return x,y
 
 def is_red(r,g,b):
+    # if r>1.0 or g>1.0 or b>1.0:
     r,g,b = r/255.0,b/255.0,g/255.0
     (h,s,v) = colorsys.rgb_to_hsv(r,g,b)
     (h,s,v) = (h*180,s*255,v*255)
 
     c1 = (h<10) and (s>50) and (v>50)
-    c2 = (h>170 and h<=180) and (s>50) and (v>50)
-
-    return (c1 or c2)
+    c2 = (h>170 and h<180) and (s>200) and (v>50)
+    # if (c1 or c2): print(h,s,v)
+    # return (c1 or c2)
+    return c1
 
 def is_green(r,g,b):
-    r,g,b = r/255.0,g/255.0,b/255.0
+    if r>1.0 or g>1.0 or b>1.0:
+        r,g,b = r/255.0,b/255.0,g/255.0
     (h,s,v) = colorsys.rgb_to_hsv(r,g,b)
     (h,s,v) = (h*180,s*255,v*255)
 
