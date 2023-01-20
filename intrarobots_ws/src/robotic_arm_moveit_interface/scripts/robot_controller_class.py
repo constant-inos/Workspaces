@@ -47,26 +47,46 @@ class Master:
         T[0:3,3] = translation_vector
         self.transformation = T
 
+    def transformation_matrix(self,pose1,pose0=(0,0,0,0,0,0)):
+        (x0,y0,z0,roll0,pitch0,yaw0) = pose0
+        (x1,y1,z1,roll1,pitch1,yaw1) = pose1
 
+        translation_vector = [x1-x0,y1-y0,z1-z0]
+        rotation_matrix  = self.ptc1.get_rotation_matrix_from_xyz((roll1-roll0, pitch1-pitch0, yaw1-yaw0))
+
+        T = np.eye(4)
+        T[:3, :3] = rotation_matrix
+        T[0:3,3] = translation_vector
+
+        return T
+             
     def combine_ptcs(self,ptc1,ptc2):
         t0 = time.time()
 
-        print("Combining Point Clouds")
-        self.create_transformation()
+        # print("Combining Point Clouds")
+        # self.create_transformation()
+        # ptc1.transform(self.transformation)
 
-        ptc1.transform(self.transformation)
+        camera1_pose = (0.84,0.54,0.8,3*np.pi/3,0,0)
+        camera2_pose = (-0.84,0.54,0.8,np.pi/3,0,0)
+        ptc1.transform(self.transformation_matrix(camera1_pose))
+        ptc2.transform(self.transformation_matrix(camera2_pose))
         
         points = list(ptc1.points) + list(ptc2.points)
         colors = list(ptc1.colors) + list(ptc2.colors)
+
+        print("Total Points",len(points))
 
         ptc = open3d.geometry.PointCloud()
         ptc.points = open3d.utility.Vector3dVector(np.array(points))
         ptc.colors = open3d.utility.Vector3dVector(np.array(colors)) 
 
         print("Exec time for combine_ptc:",time.time()-t0)
+        open3d.visualization.draw_geometries([ptc])
         return ptc
 
     def get_red_objects(self,ptc):
+
         t0 = time.time()
 
         points = list(ptc.points)
@@ -90,23 +110,75 @@ class Master:
         
         return ptc
 
-
     def read_camera1(self,msg):
+
         self.i1 += 1
-        self.ptc1 = self.pt2_to_o3d(msg)
-        # print("Camera 1 readings:",self.i1,", Camera 2 readings:",self.i2)
+        ptc1,reds,greens = self.pt2_to_o3d(msg,scan_by_color=True)
+        self.ptc1 = ptc1
+        print("Camera 1 readings:",self.i1,", Camera 2 readings:",self.i2)
 
     def read_camera2(self,msg):
         self.i2 += 1
-        self.ptc2 = self.pt2_to_o3d(msg)
+        ptc2,reds,greens = self.pt2_to_o3d(msg,scan_by_color=True)
+        self.ptc2 = ptc2
 
         if self.i1 > 1 and self.i2 > 1:
             print("Syka Blyat")
             comb_ptc = self.combine_ptcs(self.ptc1,self.ptc2)
             print("Syka Blyat 2")
-            self.get_red_objects(comb_ptc)
+            # self.get_red_objects(comb_ptc)
+            o = self.cluster_objects_3d(comb_ptc)
+            o = [ob.paint_uniform_color([random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1)]) for ob in o]
 
+            for oi in o:
+                pt = list(oi.points)
+                c = pt[int(len(pt)//2)]
+                print("Centroid of Object",c)
 
+            # open3d.visualization.draw_geometries(o)
+            # self.convex_hull(o[1])
+
+            # open3d.visualization.draw_geometries([a,b])
+            # self.get_gripper_orientation(o[1])
+            print(" ")
+
+    def get_gripper_orientation(self,object_points):
+        object_points.estimate_normals()
+        object_points.orient_normals_consistent_tangent_plane(k=3)
+
+        points = object_points.points
+        colors = object_points.colors
+        normals = object_points.normals
+
+        a = open3d.geometry.PointCloud()
+        a.points = normals
+        a.normals = points
+        a.colors = colors
+        open3d.visualization.draw_geometries([a])
+        print("1821")
+        print(np.asarray(a.normals).shape)
+        cl = self.cluster_objects_3d(a)
+        b = []
+
+        for c in cl:
+            points = c.normals
+            colors = c.colors
+            normals = c.points
+            
+            m = len(list(points))
+            p = list(points)[int(m/2)]
+            n = list(normals)[int(m/2)]
+
+            b.append(p)
+            print("Point:", p)
+            print("Normal:", n)
+        
+        a = open3d.geometry.PointCloud()
+        a.points = open3d.utility.Vector3dVector(np.array(b))
+        open3d.visualization.draw_geometries([a])
+
+        return 
+            
     def pt2_to_o3d(self,msg,scan_by_color=False):
         t0 = time.time()
 
@@ -134,9 +206,9 @@ class Master:
 
         for p in points:
             x,y,z,b,g,r = p      
-
+            # print(z)
             xyz.append((x,y,z))
-            rgb.append((r,g,b))         
+            rgb.append((r,g,b))
 
             if scan_by_color:
                 if is_red(r,g,b): 
@@ -155,24 +227,67 @@ class Master:
         else:
             print("Zero Points Found")
 
-        if scan_by_color:
-            # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE RED POINTS
-            reds = open3d.geometry.PointCloud()
-            if len(red_objects_points) > 0:
-                reds.points = open3d.utility.Vector3dVector(np.array(red_objects_points))
-                reds.colors = open3d.utility.Vector3dVector(np.array(red_objects_colors))
+        
+        # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE RED POINTS
+        reds = open3d.geometry.PointCloud()
+        if len(red_objects_points) > 0 and scan_by_color:
+            reds.points = open3d.utility.Vector3dVector(np.array(red_objects_points))
+            reds.colors = open3d.utility.Vector3dVector(np.array(red_objects_colors))
 
-            # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE GREEN POINTS
-            greens = open3d.geometry.PointCloud()
-            if len(green_objects_points)>0:
-                greens.points = open3d.utility.Vector3dVector(np.array(green_objects_points))
-                greens.colors = open3d.utility.Vector3dVector(np.array(green_objects_colors))
+        # CREATE AN OPEN3D POINT CLOUD CONTAINING ALL THE GREEN POINTS
+        greens = open3d.geometry.PointCloud()
+        if len(green_objects_points)>0 and scan_by_color:
+            greens.points = open3d.utility.Vector3dVector(np.array(green_objects_points))
+            greens.colors = open3d.utility.Vector3dVector(np.array(green_objects_colors))
 
         print("Exec time for pt2_to_o3d:",time.time()-t0)
-        if scan_by_color:
-            return open3d_cloud, reds, greens
-        else:   
-            return open3d_cloud
+        # open3d.visualization.draw_geometries([reds])
+        return open3d_cloud, reds, greens
+
+    def cluster_objects_3d(self,point_cloud):
+        # input: point cloud
+        # output: list of cluster of point clouds
+
+        cluster_ind = np.array( point_cloud.cluster_dbscan(eps=0.01,min_points=4) )
+        num_clusters = cluster_ind.max() + 1
+        all_points = np.array(point_cloud.points)
+        all_colors = np.array(point_cloud.colors)
+        all_normals = np.array(point_cloud.normals)
+
+        has_normals = len(list(all_normals)) == len(list(all_points))
+        has_colors = len(list(all_colors)) == len(list(all_points))
+
+        clusters = []
+
+        for i in range(num_clusters):
+            a = np.ones(cluster_ind.shape)
+            a[cluster_ind != i] = 0
+
+            cluster = open3d.geometry.PointCloud()
+
+            cluster_points = all_points[a==1]
+            cluster.points = open3d.utility.Vector3dVector(cluster_points)
+
+            if has_colors: 
+                cluster_colors = all_colors[a==1]
+                cluster.colors = open3d.utility.Vector3dVector(cluster_colors)
+            
+            if has_normals: 
+                cluster_normals = all_normals[a==1]
+                cluster.normals = open3d.utility.Vector3dVector(cluster_normals)
+
+            clusters.append(cluster)
+        
+        return clusters
+
+    def convex_hull(self,ptc):
+        # pcl = mesh.sample_points_poisson_disk(number_of_points=2000)
+        hull, _ = ptc.compute_convex_hull()
+        hull_ls = open3d.geometry.LineSet.create_from_triangle_mesh(hull)
+        hull_ls.paint_uniform_color((1, 0, 0))
+        open3d.visualization.draw_geometries([ptc, hull_ls])
+
+
 
 
 def create_pose_msg(pose_goal_raw):
@@ -193,7 +308,7 @@ def move_to_specified_pose(value):
 
     x,y,z = value
     theta = get_gripper_angle(x,y)
-    pose_euler = [x,y,z,0.0,np.pi,theta]
+    pose_euler = [x,y,z,np.pi/2,np.pi,theta]
     pose_quat = create_pose_msg(pose_euler)
     
     msg = GoToPoseCommand()
@@ -377,8 +492,8 @@ def is_red(r,g,b):
 
     c1 = (h<10) and (s>50) and (v>50)
     c2 = (h>170 and h<180) and (s>200) and (v>50)
-    # if (c1 or c2): print(h,s,v)
-    # return (c1 or c2)
+    
+    return (c1 or c2)
     return c1
 
 def is_green(r,g,b):
@@ -502,30 +617,12 @@ def read_point_cloud2(msg):
     return image
 
 
-def cluster_objects_3d(point_cloud):
-    cluster_ind = np.array( point_cloud.cluster_dbscan(eps=0.1,min_points=4) )
-    num_clusters = cluster_ind.max() + 1
-    all_points = np.array(point_cloud.points)
-
-    clusters = []
-
-    for i in range(num_clusters):
-        a = np.ones(cluster_ind.shape)
-        a[cluster_ind != i] = 0
-        
-        cluster_points = all_points[a==1]
-
-        cluster = open3d.geometry.PointCloud()
-        cluster.points = open3d.utility.Vector3dVector(cluster_points)
-        clusters.append(cluster)
-    
-    return clusters
 
 
 def get_point_cloud(msg):
 
     # image = read_point_cloud2(msg)
-    o3d_cloud = pt2_to_o3d(msg)
+    o3d_cloud = pt2_to_o3d(msg,scan_by_color=True)
     # open3d.visualization.draw_geometries([reds,greens])
     return
     
