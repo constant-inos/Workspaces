@@ -26,15 +26,14 @@ exev_status_code = 0
 exev_status_text = ''
 ROBOT_NAME = 'panda'
 
-go_to_pose_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/go_to_pose_command",GoToPoseCommand,queue_size=1)
-move_gripper_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/move_gripper_command",MoveGripperCommand,queue_size=1)
+go_to_pose_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/go_to_pose_command",GoToPoseCommand,queue_size=10)
+move_gripper_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/move_gripper_command",MoveGripperCommand,queue_size=10)
 
 class Master:
     def __init__(self):
         self.ptc1 = -1
         self.ptc2 = -1
         self.ptc = -1
-        self.transformation = np.eye(4)
         self.i1 = 0
         self.i2 = 0
 
@@ -45,44 +44,92 @@ class Master:
         translation_vector = [0,-a,a]
         T[:3, :3] = rotation_matrix
         T[0:3,3] = translation_vector
-        self.transformation = T
-
-    def transformation_matrix(self,pose1,pose0=(0,0,0,0,0,0)):
-        (x0,y0,z0,roll0,pitch0,yaw0) = pose0
-        (x1,y1,z1,roll1,pitch1,yaw1) = pose1
-
-        translation_vector = [x1-x0,y1-y0,z1-z0]
-        rotation_matrix  = self.ptc1.get_rotation_matrix_from_xyz((roll1-roll0, pitch1-pitch0, yaw1-yaw0))
-
-        T = np.eye(4)
-        T[:3, :3] = rotation_matrix
-        T[0:3,3] = translation_vector
-
-        return T
-             
-    def combine_ptcs(self,ptc1,ptc2):
-        t0 = time.time()
-
-        # print("Combining Point Clouds")
-        # self.create_transformation()
-        # ptc1.transform(self.transformation)
-
-        camera1_pose = (0.84,0.54,0.8,3*np.pi/3,0,0)
-        camera2_pose = (-0.84,0.54,0.8,np.pi/3,0,0)
-        ptc1.transform(self.transformation_matrix(camera1_pose))
-        ptc2.transform(self.transformation_matrix(camera2_pose))
         
-        points = list(ptc1.points) + list(ptc2.points)
-        colors = list(ptc1.colors) + list(ptc2.colors)
+        return T
 
-        print("Total Points",len(points))
+    def align_axes_system(self,ptc):
+        # T = np.eye(4) 
+        
+        # T[:3, :3] = rotation_matrix
+        # T[0:3,3] = translation_vector
+
+        R = ptc.get_rotation_matrix_from_xyz((-np.pi/4, 0, 0))
+        ptc.rotate(R,center=(0, 0, 0))
+
+        R = ptc.get_rotation_matrix_from_xyz((0, np.pi/2, 0))
+        ptc.rotate(R,center=(0, 0, 0))
+
+        R = ptc.get_rotation_matrix_from_xyz((-np.pi/2, 0, 0))
+        ptc.rotate(R,center=(0, 0, 0))
+
+        translation_vector = [-0.84,0.54,0.8]
+        ptc.translate(translation_vector)
+
+        return ptc
+             
+    def add_axis_display(self,ptc):
+        # black at center
+        # red   at x axis
+        # green at y axis
+        # blue  at z axis
+
+        points = list(ptc.points)
+        colors = list(ptc.colors)
+
+        points.append((0,0,0))
+        colors.append((0,0,0))
+
+        points.append((0.1,0,0))
+        colors.append((1,0,0))
+
+        points.append((0,0.1,0))
+        colors.append((0,1,0))
+
+        points.append((0,0,0.1))
+        colors.append((0,0,1))
 
         ptc = open3d.geometry.PointCloud()
         ptc.points = open3d.utility.Vector3dVector(np.array(points))
         ptc.colors = open3d.utility.Vector3dVector(np.array(colors)) 
 
+        return ptc
+
+    def scan_by_height(self,ptc,h=0.116):
+        points = list(ptc.points)
+        colors = list(ptc.colors)
+
+        p = []
+        c = []
+
+        for i in range(len(points)):
+            if points[i][2] > h:
+                p.append(points[i])
+                c.append(colors[i])
+
+        ptc = open3d.geometry.PointCloud()
+        ptc.points = open3d.utility.Vector3dVector(np.array(p))
+        ptc.colors = open3d.utility.Vector3dVector(np.array(c)) 
+
+        return ptc
+
+    def combine_ptcs(self,ptc1,ptc2):
+        t0 = time.time()
+
+        print("Combining Point Clouds")
+        ptc1.transform(self.create_transformation())
+
+        points = list(ptc1.points) + list(ptc2.points)
+        colors = list(ptc1.colors) + list(ptc2.colors)
+        
+        ptc = open3d.geometry.PointCloud()
+        ptc.points = open3d.utility.Vector3dVector(np.array(points))
+        ptc.colors = open3d.utility.Vector3dVector(np.array(colors)) 
+
+        ptc = self.align_axes_system(ptc)
+        # ptc_ = self.add_axis_display(ptc)
+
         print("Exec time for combine_ptc:",time.time()-t0)
-        open3d.visualization.draw_geometries([ptc])
+        # open3d.visualization.draw_geometries([ptc])
         return ptc
 
     def get_red_objects(self,ptc):
@@ -114,33 +161,48 @@ class Master:
 
         self.i1 += 1
         ptc1,reds,greens = self.pt2_to_o3d(msg,scan_by_color=True)
-        self.ptc1 = ptc1
+        self.ptc1 = reds
         print("Camera 1 readings:",self.i1,", Camera 2 readings:",self.i2)
 
     def read_camera2(self,msg):
         self.i2 += 1
         ptc2,reds,greens = self.pt2_to_o3d(msg,scan_by_color=True)
-        self.ptc2 = ptc2
+        self.ptc2 = reds
+
+        # self.test_motion_planning()
 
         if self.i1 > 1 and self.i2 > 1:
-            print("Syka Blyat")
+            print("Cyka Blyat")
             comb_ptc = self.combine_ptcs(self.ptc1,self.ptc2)
-            print("Syka Blyat 2")
+            comb_ptc = self.scan_by_height(comb_ptc)
+            print("Cyka Blyat 2")
             # self.get_red_objects(comb_ptc)
             o = self.cluster_objects_3d(comb_ptc)
             o = [ob.paint_uniform_color([random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1)]) for ob in o]
-
-            for oi in o:
-                pt = list(oi.points)
-                c = pt[int(len(pt)//2)]
-                print("Centroid of Object",c)
 
             # open3d.visualization.draw_geometries(o)
             # self.convex_hull(o[1])
 
             # open3d.visualization.draw_geometries([a,b])
-            # self.get_gripper_orientation(o[1])
-            print(" ")
+            obj = o[1]
+            p1,p2 = self.get_gripper_orientation(obj)
+
+
+            # print(p1,p2)
+            # points = list(obj.points) + [p1,p2]
+            # colors = list(obj.colors) + [(1,0,0),(1,0,0)]
+
+            # ptc = open3d.geometry.PointCloud()
+            # ptc.points = open3d.utility.Vector3dVector(np.array(points))
+            # ptc.colors = open3d.utility.Vector3dVector(np.array(colors)) 
+            # open3d.visualization.draw_geometries([ptc])
+
+            # print(" ")
+
+            c = (np.array(p1) + np.array(p2)) / 2
+            s = self.get_object(c,'red')
+            return
+
 
     def get_gripper_orientation(self,object_points):
         object_points.estimate_normals()
@@ -154,13 +216,11 @@ class Master:
         a.points = normals
         a.normals = points
         a.colors = colors
-        open3d.visualization.draw_geometries([a])
-        print("1821")
-        print(np.asarray(a.normals).shape)
-        cl = self.cluster_objects_3d(a)
-        b = []
 
-        for c in cl:
+        clusters_of_normals = self.cluster_objects_3d(a)
+        P,N = [],[]
+
+        for c in clusters_of_normals:
             points = c.normals
             colors = c.colors
             normals = c.points
@@ -169,15 +229,25 @@ class Master:
             p = list(points)[int(m/2)]
             n = list(normals)[int(m/2)]
 
-            b.append(p)
+            P.append(p)
+            N.append(n)
             print("Point:", p)
             print("Normal:", n)
         
-        a = open3d.geometry.PointCloud()
-        a.points = open3d.utility.Vector3dVector(np.array(b))
-        open3d.visualization.draw_geometries([a])
+        d_max = -1
+        p1 = -1
+        p2 = -1
+        for i in range(len(P)):
+            for j in range(len(P)):
+                d = math.dist(N[i],N[j]) 
+                if math.dist(N[i],N[j]) > d_max:
+                    d_max = d
+                    p1 = P[i]+0.001
+                    p2 = P[j]+0.001
 
-        return 
+        
+
+        return p1,p2
             
     def pt2_to_o3d(self,msg,scan_by_color=False):
         t0 = time.time()
@@ -217,6 +287,7 @@ class Master:
                 if is_green(r,g,b): 
                     green_objects_points.append((x,y,z))
                     green_objects_points.append((r,g,b))
+
 
         # CREATE AN OPEN3D POINT CLOUD OF THE WORLD
         open3d_cloud = open3d.geometry.PointCloud()
@@ -287,7 +358,43 @@ class Master:
         hull_ls.paint_uniform_color((1, 0, 0))
         open3d.visualization.draw_geometries([ptc, hull_ls])
 
+    def test_motion_planning(self):
+        standby_pose = (0.5,0.0,0.4)
+        move_to_specified_pose(standby_pose)
+        
+        move_to_specified_pose((0.5,0.3,0.4))
 
+
+    def get_object(self,coords,color):
+
+        x,y = coords[0],coords[1]
+
+        if x<0: phi = np.pi - np.arctan(-y/x)
+        else: phi = np.arctan(y/x)
+        pose = (x,y,0.25)
+
+        if color == 'red':
+            bucket = (0.35,-0.35,0.25)
+        else:
+            bucket = (-0.35,-0.35,0.25)
+        move_to_specified_pose(standby_pose)
+
+        open_gripper()
+
+        lower = (pose[0],pose[1],0.14)
+        move_to_specified_pose(lower)
+
+        close_gripper()
+
+        move_to_specified_pose(pose)
+
+        move_to_specified_pose(bucket)
+
+        open_gripper()
+
+        move_to_specified_pose(standby_pose)
+
+    
 
 
 def create_pose_msg(pose_goal_raw):
@@ -308,7 +415,7 @@ def move_to_specified_pose(value):
 
     x,y,z = value
     theta = get_gripper_angle(x,y)
-    pose_euler = [x,y,z,np.pi/2,np.pi,theta]
+    pose_euler = [x,y,z,0,np.pi,theta]
     pose_quat = create_pose_msg(pose_euler)
     
     msg = GoToPoseCommand()
@@ -323,7 +430,7 @@ def move_to_specified_pose(value):
     if result == 'SUCCESS':
         print("Moved to specified pose successfully")
     
-    return
+    return (result == 'SUCCESS')
 
 def control_motor_angles(value):
     arr=[]
@@ -345,7 +452,7 @@ def open_gripper():
     if result == 'SUCCESS':
         print("Gripper Opened Successfully")
     
-    return
+    return (result == 'SUCCESS')
 
 def close_gripper():
     print("Closing Gripper")
@@ -360,8 +467,11 @@ def close_gripper():
     
     if result == 'SUCCESS':
         print("Gripper Closed Successfully")
+        return True
+    else:
+        return False
 
-    return
+    return 
 
 def await_command_completion(uid):
     rospy.set_param('/command/uid',uid)
@@ -541,6 +651,8 @@ def get_object(obj_pixels,color):
         bucket = (-0.35,-0.35,0.25)
     move_to_specified_pose(standby_pose)
 
+    move_to_specified_pose(pose)
+
     open_gripper()
 
     lower = (pose[0],pose[1],0.14)
@@ -555,6 +667,7 @@ def get_object(obj_pixels,color):
     open_gripper()
 
     move_to_specified_pose(standby_pose)
+
 
 
 def get_gripper_angle(x,y):
