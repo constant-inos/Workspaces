@@ -3,9 +3,6 @@
   <arg name="robot_model"                       default=""/>
   <arg name="robot_name"                        default="$(arg robot_model)"/>
   <arg name="base_link_frame"                   default="base_link"/>
-  <arg name="show_ar_tag"                       default="false"/>
-  <arg name="show_gripper_bar"                  default="true"/>
-  <arg name="show_gripper_fingers"              default="true"/>
   <arg name="use_world_frame"                   default="true"/>
   <arg name="external_urdf_loc"                 default=""/>
   <arg name="use_rviz"                          default="false"/>
@@ -17,9 +14,13 @@
   <arg name="use_sim_time"                      default="true"/>
   <arg name="use_position_controllers"          default="false"/>
   <arg name="use_trajectory_controllers"        default="true"/>
-  <arg name="dof"                               default="5"/>
+  <arg name="robot_description_launch"          default=""/>
+  <arg name="robot_position_controllers_yaml"   default=""/>
+  <arg name="robot_trajectory_controllers_yaml" default=""/>
+  <arg name="robot_urdf"                        default=""/>
+  <arg name="robot_rviz_description"            default=""/>
 
-  <env name="GAZEBO_RESOURCE_PATH"              value="$(find robotic_arm_gazebo)"/>
+  <!-- <env name="GAZEBO_RESOURCE_PATH"              value="$(find robotic_arm_gazebo)"/> -->
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="world_name"                        value="$(arg world_name)"/>
@@ -32,7 +33,7 @@
 
   <group if="$(arg use_trajectory_controllers)">
 
-    <rosparam file="$(find robotic_arm_gazebo)/config/trajectory_controllers/$(arg robot_model)_trajectory_controllers.yaml" command="load" ns="$(arg robot_name)"/>
+    <rosparam file="$(arg robot_trajectory_controllers_yaml)" command="load" ns="$(arg robot_name)"/>
 
     <node
       name="controller_spawner"
@@ -47,7 +48,7 @@
 
   <group if="$(arg use_position_controllers)">
 
-    <rosparam file="$(find robotic_arm_gazebo)/config/position_controllers/$(arg robot_model)_position_controllers.yaml" command="load" ns="$(arg robot_name)"/>
+    <rosparam file="$(arg robot_position_controllers_yaml)" command="load" ns="$(arg robot_name)"/>
 
     <node if="$(eval dof == 4)"
       name="controller_spawner"
@@ -94,17 +95,16 @@
                   kuka_arm_5_joint_controller kuka_arm_6_joint_controller"/>
   </group>
 
-  <include file="$(find robotic_arm_descriptions)/launch/robotic_arm_description.launch">
+  <include file="$(arg robot_description_launch)">
     <arg name="robot_model"                       value="$(arg robot_model)"/>
     <arg name="robot_name"                        value="$(arg robot_name)"/>
     <arg name="base_link_frame"                   value="$(arg base_link_frame)"/>
-    <arg name="show_ar_tag"                       value="$(arg show_ar_tag)"/>
-    <arg name="show_gripper_bar"                  value="$(arg show_gripper_bar)"/>
-    <arg name="show_gripper_fingers"              value="$(arg show_gripper_fingers)"/>
     <arg name="load_gazebo_configs"               value="true"/>
     <arg name="use_world_frame"                   value="$(arg use_world_frame)"/>
     <arg name="external_urdf_loc"                 value="$(arg external_urdf_loc)"/>
     <arg name="use_rviz"                          value="$(arg use_rviz)"/>
+    <arg name="robot_urdf"                        value="$(arg robot_urdf)"/>
+    <arg name="robot_rviz_description"            value="$(arg robot_rviz_description)"/>
   </include>
 
   <node

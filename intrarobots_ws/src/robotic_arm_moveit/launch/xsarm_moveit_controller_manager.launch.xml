@@ -1,8 +1,10 @@
 <launch>
 
   <!-- loads moveit_controller_manager on the parameter server -->
-  <arg name="dof"                         default=""/>
-  <arg name="fake_execution"              default="false"/>
+  <arg name="robot_model"                    default=""/>
+  <arg name="fake_execution"                 default="false"/>
+  <arg name="robot_controllers"              default=""/>
+  <arg name="robot_fake_controllers"         default=""/>
 
  <group if="$(arg fake_execution)">
 
@@ -10,7 +12,7 @@
    <param name="moveit_controller_manager" value="moveit_fake_controller_manager/MoveItFakeControllerManager"/>
 
    <!-- The rest of the params are specific to this plugin -->
-   <rosparam file="$(find robotic_arm_moveit)/config/fake_controllers/$(arg dof)dof_controllers.yaml"/>
+   <rosparam file="$(arg robot_fake_controllers)"/>
 
  </group>
 
@@ -19,7 +21,7 @@
     <param name="moveit_controller_manager" value="moveit_simple_controller_manager/MoveItSimpleControllerManager"/>
 
     <!-- loads controllers to the param server -->
-    <rosparam file="$(find robotic_arm_moveit)/config/controllers/$(arg dof)dof_controllers.yaml"/>
+    <rosparam file="$(arg robot_controllers)"/>
 
   </group>
 

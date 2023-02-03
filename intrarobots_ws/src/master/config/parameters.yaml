@@ -1,0 +1,88 @@
+## CONFIGURATION ARGUMENTS
+robot_model: 'panda'
+robot_name: 'panda'
+base_link_frame: 'panda_link0'
+use_world_frame: true
+external_urdf_loc: ''
+external_srdf_loc: ''
+mode_configs: "$(find robotic_arm_moveit)/config/modes.yaml"
+use_moveit_rviz: true
+rviz_frame: 'world'
+use_gazebo: true
+use_actual: false
+use_fake: false
+world_name: "$(find robotic_arm_gazebo)/worlds/xsarm_gazebo.world"
+use_cpp_interface: true
+moveit_interface_gui: true
+use_python_interface: true
+
+use_trajectory_controllers: true
+use_position_controllers: false #(if yes, list of position controllers)
+
+# use_rviz: true
+# rvizconfig: 
+# load_gazebo_configs
+# # -> robot specific args (show_ar_tag,show_gripper_bar,show_gripper_fingers)
+# use_joint_pub
+# use_joint_pub_gui
+# rate
+# source_list ???
+# use_moveit_rviz
+
+
+## LAUNCH FILE CHAIN
+
+# first launch (pkg: master)
+first_launch: "/home/karagk/Workspaces/intrarobots_ws/src/master/launch"
+# first moveit launch (pkg: robotic_arm_moveit)
+moveit_launch: "$(find robotic_arm_moveit)/launch/xsarm_moveit.launch"
+# gazebo launch (pkg: robotic_arm_gazebo)
+gazebo_launch: "$(find robotic_arm_gazebo)/launch/xsarm_gazebo.launch"
+# robot description launch
+robot_description_launch: "$(find robotic_arm_descriptions)/launch/robotic_arm_description.launch"
+# if use_actual (haven't used it)
+robot_ros_control_launch: "$(find robotic_arm_ros_control)/launch/robotic_arm_ros_control.launch"
+# move group launch 
+move_group_launch: "$(find robotic_arm_moveit)/launch/move_group.launch"
+# planning_context launch
+planning_context_launch: "$(find robotic_arm_moveit)/launch/planning_context.launch"
+# planning functionality
+planning_pipeline_launch: "$(find robotic_arm_moveit)/launch/planning_pipeline.launch.xml"
+# "$(find robotic_arm_moveit)/launch/ompl_planning_pipeline.launch.xml" (default)
+# "$(find robotic_arm_moveit)/launch/chomp_planning_pipeline.launch.xml"
+# Trajectory Execution Functionality
+trajectory_execution_launch: "$(find robotic_arm_moveit)/launch/trajectory_execution.launch.xml"
+# robot specific controller manager
+robot_controller_manager: "$(find robotic_arm_moveit)/launch/xsarm_moveit_controller_manager.launch.xml"
+# Sensors Functionality
+sensor_manager_launch: "$(find robotic_arm_moveit)/launch/sensor_manager.launch.xml"
+# robot specific sensor manager (we edit this to add our sensors)
+robot_sensor_manager_launch: "$(find robotic_arm_moveit)/launch/xsarm_moveit_sensor_manager.launch.xml"
+
+## CONFIGURATION FILES
+
+# trajectory controllers yaml
+robot_trajectory_controllers_yaml: "$(find robotic_arm_gazebo)/config/trajectory_controllers/$(arg robot_model)_trajectory_controllers.yaml" #??? for multiple robots we have to $(find ...) in name
+# position controllers yaml (usually not used)
+robot_position_controllers_yaml: "$(find robotic_arm_gazebo)/config/position_controllers/$(arg robot_model)_position_controllers.yaml"
+# urdf xacro
+robot_urdf: "$(arg robot_model_description_pkg)/urdf/$(arg robot_model).urdf.xacro"
+# rviz description (haven't used it)
+robot_rviz_description: "$(arg robot_model_description_pkg)/rviz/robotic_arm_description.rviz"
+# haven't changed it
+gdb_settings: "$(find robotic_arm_moveit)/launch/gdb_settings.gdb"
+# srdf xacro
+robot_srdf: "$(arg robot_model_moveit_config_pkg)/config/srdf/$(arg robot_model).srdf.xacro"
+# joint limits yaml
+robot_joint_limits_yaml: "$(arg robot_model_moveit_config_pkg)/config/joint_limits.yaml"
+# kinematics yaml
+kinematics_yaml: "$(arg robot_model_moveit_config_pkg)/config/kinematics.yaml"
+# robot_controllers
+robot_controllers: "$(arg robot_model_moveit_config_pkg)/config/controllers/$(arg robot_model)_controllers.yaml"
+# if use_fake, fake execution robot controllers
+robot_fake_controllers: "$(arg robot_model_moveit_config_pkg)/config/fake_controllers/$(arg robot_model)_controllers.yaml"
+# 3D sensors config yaml
+sensors_3d_yaml: "$(find robotic_arm_moveit)/config/sensors_3d.yaml"
+# robot_model config
+robot_config_yaml: "$(find master)/config/$(arg robot_model).yaml"
+

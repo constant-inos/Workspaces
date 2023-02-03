@@ -7,16 +7,23 @@
   <arg name="base_link_frame" default=""/>
   <arg name="show_ar_tag" default=""/>
   <arg name="external_srdf_loc" default=""/>
-  <arg name="dof"        default=""/>
+  <arg name="robot_urdf" default=""/>
+  <arg name="robot_srdf" default=""/>
+  <arg name="robot_joint_limits_yaml" default=""/>
+  <arg name="kinematics_yaml" default=""/>
+  <!-- <arg name="sensors_3d_yaml" default=""/> -->
+
   <!-- The name of the parameter under which the URDF is loaded -->
   <arg name="robot_description" default="robot_description"/>
 
+
   <!-- Load universal robot description format (URDF) -->
-  <param if="$(arg load_robot_description)" name="$(arg robot_description)" command="xacro $(find robotic_arm_descriptions)/urdf/$(arg robot_model).urdf.xacro"/>
+  <param if="$(arg load_robot_description)" name="$(arg robot_description)" command="xacro $(arg robot_urdf)"/>
 
   <!-- The semantic description that corresponds to the URDF -->
   <param name="$(arg robot_description)_semantic"
-    command="xacro $(find robotic_arm_moveit)/config/srdf/$(arg robot_model).srdf.xacro
+
+    command="xacro $(arg robot_srdf)
         robot_name:=$(arg robot_name)
         base_link_frame:=$(arg base_link_frame)
         show_ar_tag:=$(arg show_ar_tag)
@@ -24,12 +31,12 @@
 
   <!-- Load updated joint limits (override information from URDF) -->
   <group ns="$(arg robot_description)_planning">
-    <rosparam command="load" file="$(find robotic_arm_moveit)/config/joint_limits/$(arg dof)dof_joint_limits.yaml"/>
+    <rosparam command="load" file="$(arg robot_joint_limits_yaml)"/>
   </group>
 
   <!-- Load default settings for kinematics; these settings are overridden by settings in a node's namespace -->
   <group ns="$(arg robot_description)_kinematics">
-    <rosparam command="load" file="$(find robotic_arm_moveit)/config/kinematics.yaml"/>
+    <rosparam command="load" file="$(arg kinematics_yaml)"/>
   </group>
 
 </launch>

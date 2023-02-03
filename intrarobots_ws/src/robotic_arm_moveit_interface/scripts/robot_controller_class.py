@@ -47,33 +47,33 @@ class Master:
         T[0:3,3] = translation_vector
         self.transformation = T
 
+
     def transformation_matrix(self,pose1,pose0=(0,0,0,0,0,0)):
         (x0,y0,z0,roll0,pitch0,yaw0) = pose0
         (x1,y1,z1,roll1,pitch1,yaw1) = pose1
 
         translation_vector = [x1-x0,y1-y0,z1-z0]
-        rotation_matrix  = self.ptc1.get_rotation_matrix_from_xyz((roll1-roll0, pitch1-pitch0, yaw1-yaw0))
+        rotation_matrix  = self.ptc1.get_rotation_matrix_from_xyz((pitch1-pitch0, roll1-roll0,  yaw1-yaw0))
 
         T = np.eye(4)
         T[:3, :3] = rotation_matrix
         T[0:3,3] = translation_vector
 
         return T
-             
+
+
     def combine_ptcs(self,ptc1,ptc2):
         t0 = time.time()
 
-        # print("Combining Point Clouds")
-        # self.create_transformation()
-        # ptc1.transform(self.transformation)
+        print("Combining Point Clouds")
+        self.create_transformation()
+        ptc1.transform(self.transformation)
 
-        camera1_pose = (0.84,0.54,0.8,3*np.pi/3,0,0)
-        camera2_pose = (-0.84,0.54,0.8,np.pi/3,0,0)
-        ptc1.transform(self.transformation_matrix(camera1_pose))
-        ptc2.transform(self.transformation_matrix(camera2_pose))
-        
         points = list(ptc1.points) + list(ptc2.points)
         colors = list(ptc1.colors) + list(ptc2.colors)
+
+        points.append((0,0,0))
+        colors.append((0,0,0))
 
         print("Total Points",len(points))
 
@@ -84,6 +84,7 @@ class Master:
         print("Exec time for combine_ptc:",time.time()-t0)
         open3d.visualization.draw_geometries([ptc])
         return ptc
+
 
     def get_red_objects(self,ptc):
 

@@ -1,5 +1,6 @@
 <launch>
-
+  
+  <arg name="robot_controller_manager_launch" default=""/>
   <!-- This file makes it easy to include the settings for trajectory execution  -->
 
   <!-- Flag indicating whether MoveIt! is allowed to load/unload  or switch controllers -->
@@ -14,11 +15,17 @@
   <param name="trajectory_execution/allowed_start_tolerance" value="0.01"/> <!-- default 0.01 -->
 
   <!-- Load the robot specific controller manager; this sets the moveit_controller_manager ROS parameter -->
-  <arg name="dof"             default=""/>
-  <arg name="fake_execution"  default="false"/>
-  <include file="$(find robotic_arm_moveit)/launch/xsarm_moveit_controller_manager.launch.xml">
-    <arg name="dof" value="$(arg dof)"/>
-    <arg name="fake_execution" value="$(arg fake_execution)"/>
+  <arg name="robot_model"             default=""/>
+  <arg name="fake_execution"          default="false"/>
+  <arg name="robot_controllers"       default=""/>
+  <arg name="robot_fake_controllers"  default=""/>
+
+
+  <include file="$(arg robot_controller_manager_launch)">
+    <arg name="robot_model"                    value="$(arg robot_model)"/>
+    <arg name="fake_execution"                 value="$(arg fake_execution)"/>
+    <arg name="robot_controllers"              value="$(arg robot_controllers)"/>
+    <arg name="robot_fake_controllers"         value="$(arg robot_fake_controllers)"/>
   </include>
 
 </launch>

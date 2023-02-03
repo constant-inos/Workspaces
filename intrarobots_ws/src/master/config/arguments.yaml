@@ -1,0 +1,17 @@
+robot_model: 'panda'
+robot_name: robot_model
+base_link_frame: panda_link0
+show_ar_tag: false
+use_world_frame: true
+external_urdf_loc: "/home/karagk/Workspaces/intrarobots_ws/src/extras/extrernal_urdfs/double_depth_camera.xacro"
+external_srdf_loc: ''
+mode_configs: '' #$(find robotic_arm_moveit)/config/modes.yaml
+use_moveit_rviz: true
+rviz_frame: 'world'
+use_gazebo: true
+use_actual: false
+use_fake: false
+world_name: "/home/karagk/Workspaces/intrarobots_ws/src/robotic_arm_gazebo/worlds/xsarm_gazebo.world"
+use_cpp_interface: false
+moveit_interface_gui: true
+use_python_interface: true

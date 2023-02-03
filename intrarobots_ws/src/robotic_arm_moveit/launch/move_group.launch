@@ -1,10 +1,25 @@
 <launch>
 
+  <arg name="gdb_settings"                      default="" />
+  <arg name="planning_context_launch"           default="" />
+  <arg name="planning_pipeline_launch"          default="" />
+  <arg name="trajectory_execution_launch"       default="" />
+  <arg name="sensor_manager_launch"             default="" />
+  <arg name="robot_sensor_manager_launch"       default="" />
+  <arg name="robot_urdf"                        default=""/>
+  <arg name="robot_srdf"                        default=""/>
+  <arg name="robot_joint_limits_yaml"           default=""/>
+  <arg name="kinematics_yaml"                   default=""/>
+  <arg name="robot_controller_manager_launch"   default=""/>
+  <arg name="robot_controllers"                 default=""/>
+  <arg name="robot_fake_controllers"            default=""/>
+  <arg name="sensors_3d_yaml"                   default=""/>
+
   <!-- GDB Debug Option -->
   <arg name="debug" default="false" />
   <arg unless="$(arg debug)" name="launch_prefix" value="" />
   <arg     if="$(arg debug)" name="launch_prefix"
-	   value="gdb -x $(find robotic_arm_moveit)/launch/gdb_settings.gdb --ex run --args" />
+	   value="gdb -x $(arg gdb_settings) --ex run --args" />
 
   <!-- Verbose Mode Option -->
   <arg name="info" default="$(arg debug)" />
@@ -22,34 +37,43 @@
   <arg name="robot_name" default=""/>
   <arg name="robot_model" default=""/>
   <arg name="base_link_frame" default=""/>
-  <arg name="show_ar_tag" default=""/>
   <arg name="external_srdf_loc" default=""/>
-  <arg name="dof" default=""/>
 
-  <include file="$(find robotic_arm_moveit)/launch/planning_context.launch">
-    <arg name="robot_name"        value="$(arg robot_name)"/>
-    <arg name="robot_model"       value="$(arg robot_model)"/>
-    <arg name="base_link_frame"   value="$(arg base_link_frame)"/>
-    <arg name="show_ar_tag"       value="$(arg show_ar_tag)"/>
-    <arg name="external_srdf_loc" value="$(arg external_srdf_loc)"/>
-    <arg name="dof"               value="$(arg dof)"/>
+
+  <include file="$(arg planning_context_launch)">
+    <arg name="robot_name"              value="$(arg robot_name)"/>
+    <arg name="robot_model"             value="$(arg robot_model)"/>
+    <arg name="base_link_frame"         value="$(arg base_link_frame)"/>
+    <arg name="external_srdf_loc"       value="$(arg external_srdf_loc)"/>
+    <arg name="robot_urdf"              value="$(arg robot_urdf)"/>
+    <arg name="robot_srdf"              value="$(arg robot_srdf)"/>
+    <arg name="robot_joint_limits_yaml" value="$(arg robot_joint_limits_yaml)"/>
+    <arg name="kinematics_yaml"         value="$(arg kinematics_yaml)"/>
+    <!-- <arg name="sensors_3d_yaml"         value="$(arg sensors_3d_yaml)"/> -->
+
   </include>
 
     <!-- Planning Functionality -->
-    <include ns="move_group" file="$(find robotic_arm_moveit)/launch/planning_pipeline.launch.xml">
+    <include ns="move_group" file="$(arg planning_pipeline_launch)">
       <arg name="pipeline" value="ompl" />
     </include>
 
     <!-- Trajectory Execution Functionality -->
-    <include ns="move_group" file="$(find robotic_arm_moveit)/launch/trajectory_execution.launch.xml" if="$(arg allow_trajectory_execution)">
-      <arg name="fake_execution" value="$(arg fake_execution)"/>
-      <arg name="dof" value="$(arg dof)"/>
+    <include ns="move_group" file="$(arg trajectory_execution_launch)" if="$(arg allow_trajectory_execution)">
+      <arg name="fake_execution"                    value="$(arg fake_execution)"/>
+      <arg name="robot_model"                       value="$(arg robot_model)"/>
+      <arg name="robot_controller_manager_launch"   value="$(arg robot_controller_manager_launch)"/>
+      <arg name="robot_controllers"                 value="$(arg robot_controllers)"/>
+      <arg name="robot_fake_controllers"            value="$(arg robot_fake_controllers)"/>
     </include>
 
     <!-- Sensors Functionality -->
-    <include ns="move_group" file="$(find robotic_arm_moveit)/launch/sensor_manager.launch.xml" if="$(arg allow_trajectory_execution)">
+    <include ns="move_group" file="$(arg sensor_manager_launch)" if="$(arg allow_trajectory_execution)">
       <arg name="robot_name" value="$(arg robot_name)" />
       <arg name="base_link_frame" value="$(arg base_link_frame)"/>
+      <arg name="robot_sensor_manager_launch" value="$(arg robot_sensor_manager_launch)"/>
+      <arg name="sensors_3d_yaml" value="$(arg sensors_3d_yaml)"/>
+      
     </include>
 
     <!-- Start the actual move_group node/action server -->

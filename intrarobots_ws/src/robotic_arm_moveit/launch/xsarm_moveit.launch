@@ -3,7 +3,6 @@
   <arg name="robot_model"                       default=""/>
   <arg name="robot_name"                        default="$(arg robot_model)"/>
   <arg name="base_link_frame"                   default="base_link"/>
-  <arg name="show_ar_tag"                       default="false"/>
   <arg name="use_world_frame"                   default="true"/>
   <arg name="external_urdf_loc"                 default=""/>
   <arg name="external_srdf_loc"                 default=""/>
@@ -13,59 +12,99 @@
   <arg name="use_gazebo"                        default="false"/>
   <arg name="use_actual"                        default="false"/>
   <arg name="use_fake"                          default="false"/>
-  <arg name="dof"                               default="5"/>
   <arg name="world_name"                        default="$(find robotic_arm_gazebo)/worlds/xsarm_gazebo.world"/>
 
-  <include if="$(arg use_gazebo)" file="$(find robotic_arm_gazebo)/launch/xsarm_gazebo.launch">
+  <arg name="moveit_launch"                     default=""/>
+  <arg name="gazebo_launch"                     default=""/>
+  <arg name="robot_description_launch"          default=""/>
+  <arg name="robot_ros_control_launch"          default=""/>
+  <arg name="move_group_launch"                 default=""/>
+  <arg name="planning_context_launch"           default=""/>
+  <arg name="planning_pipeline_launch"          default=""/>
+  <arg name="trajectory_execution_launch"       default=""/>
+  <arg name="robot_controller_manager_launch"   default=""/>
+  <arg name="sensor_manager_launch"             default=""/>
+  <arg name="robot_sensor_manager_launch"       default=""/>
+  <arg name="moveit_rviz_launch"                default=""/>
+
+  <arg name="robot_trajectory_controllers_yaml" default=""/>
+  <arg name="robot_position_controllers_yaml"   default=""/>
+  <arg name="robot_urdf"                        default=""/>
+  <arg name="robot_rviz_description"            default=""/>
+  <arg name="gdb_settings"                      default=""/>
+  <arg name="robot_srdf"                        default=""/>
+  <arg name="robot_joint_limits_yaml"           default=""/>
+  <arg name="kinematics_yaml"                   default=""/>
+  <arg name="robot_controllers"                 default=""/>
+  <arg name="robot_fake_controllers"            default=""/>
+  <arg name="sensors_3d_yaml"                   default=""/>
+  <arg name="robot_config_yaml"                 default=""/>
+
+  <include if="$(arg use_gazebo)" file="$(arg gazebo_launch)">
     <arg name="robot_model"                       value="$(arg robot_model)"/>
     <arg name="robot_name"                        value="$(arg robot_name)"/>
     <arg name="base_link_frame"                   value="$(arg base_link_frame)"/>
-    <arg name="show_ar_tag"                       value="$(arg show_ar_tag)"/>
     <arg name="use_world_frame"                   value="$(arg use_world_frame)"/>
     <arg name="external_urdf_loc"                 value="$(arg external_urdf_loc)"/>
     <arg name="world_name"                        value="$(arg world_name)"/>
     <arg name="use_trajectory_controllers"        value="true"/>
     <arg name="use_position_controllers"          value="false"/>
-    <arg name="dof"                               value="$(arg dof)"/>
+    <arg name="robot_description_launch"          value="$(arg robot_description_launch)"/>
+    <arg name="robot_trajectory_controllers_yaml" value="$(arg robot_trajectory_controllers_yaml)"/>
+    <arg name="robot_position_controllers_yaml"   value="$(arg robot_position_controllers_yaml)"/>
+    <arg name="robot_urdf"                        value="$(arg robot_urdf)"/>
+    <arg name="robot_rviz_description"            value="$(arg robot_rviz_description)"/>
   </include>
 
-  <include if="$(arg use_actual)" file="$(find robotic_arm_ros_control)/launch/robotic_arm_ros_control.launch">
+  <include if="$(arg use_actual)" file="$(arg robot_ros_control_launch)">
     <arg name="robot_model"                       value="$(arg robot_model)"/>
     <arg name="robot_name"                        value="$(arg robot_name)"/>
     <arg name="base_link_frame"                   value="$(arg base_link_frame)"/>
-    <arg name="show_ar_tag"                       value="$(arg show_ar_tag)"/>
     <arg name="use_world_frame"                   value="$(arg use_world_frame)"/>
     <arg name="external_urdf_loc"                 value="$(arg external_urdf_loc)"/>
     <arg name="use_rviz"                          value="false"/>
     <arg name="mode_configs"                      value="$(arg mode_configs)"/>
-    <arg name="dof"                               value="$(arg dof)"/>
   </include>
 
-  <include if="$(arg use_fake)" file="$(find robotic_arm_descriptions)/launch/robotic_arm_description.launch">
+  <include if="$(arg use_fake)" file="$(arg robot_description_launch)">
     <arg name="robot_model"                       value="$(arg robot_model)"/>
     <arg name="robot_name"                        value="$(arg robot_name)"/>
     <arg name="base_link_frame"                   value="$(arg base_link_frame)"/>
-    <arg name="show_ar_tag"                       value="$(arg show_ar_tag)"/>
     <arg name="use_world_frame"                   value="$(arg use_world_frame)"/>
     <arg name="external_urdf_loc"                 value="$(arg external_urdf_loc)"/>
     <arg name="use_rviz"                          value="false"/>
     <arg name="use_joint_pub"                     value="true"/>
     <arg name="rate"                              value="100"/>
     <arg name="source_list"                       value="[move_group/fake_controller_joint_states]"/>
+    <arg name="robot_rviz_description"            value="$(arg robot_rviz_description)"/>
+    <arg name="robot_urdf"                        value="$(arg robot_urdf)"/>
   </include>
 
-  <include file="$(find robotic_arm_moveit)/launch/move_group.launch" ns="$(arg robot_name)">
+  <include file="$(arg move_group_launch)" ns="$(arg robot_name)">
     <arg name="robot_model"                       value="$(arg robot_model)"/>
     <arg name="robot_name"                        value="$(arg robot_name)"/>
     <arg name="base_link_frame"                   value="$(arg base_link_frame)"/>
-    <arg name="show_ar_tag"                       value="$(arg show_ar_tag)"/>
     <arg name="external_srdf_loc"                 value="$(arg external_srdf_loc)"/>
-    <arg name="dof"                               value="$(arg dof)"/>
     <arg name="fake_execution"                    value="$(arg use_fake)"/>
     <arg name="publish_monitored_planning_scene"  value="true" />
+    <arg name="gdb_settings"                      value="$(arg gdb_settings)" />
+    <arg name="planning_context_launch"           value="$(arg planning_context_launch)" />
+    <arg name="planning_pipeline_launch"          value="$(arg planning_pipeline_launch)" />
+    <arg name="trajectory_execution_launch"       value="$(arg trajectory_execution_launch)" />
+    <arg name="sensor_manager_launch"             value="$(arg sensor_manager_launch)" />
+    <arg name="robot_sensor_manager_launch"       value="$(arg robot_sensor_manager_launch)" />
+    <arg name="robot_urdf"                        value="$(arg robot_urdf)"/>
+    <arg name="robot_srdf"                        value="$(arg robot_srdf)"/>
+    <arg name="robot_joint_limits_yaml"           value="$(arg robot_joint_limits_yaml)"/>
+    <arg name="kinematics_yaml"                   value="$(arg kinematics_yaml)"/>
+    <arg name="robot_controller_manager_launch"   value="$(arg robot_controller_manager_launch)"/>
+    <arg name="sensors_3d_yaml"                   value="$(arg sensors_3d_yaml)"/>
+    <arg name="robot_controllers"                 value="$(arg robot_controllers)"/>
+    <arg name="robot_fake_controllers"            value="$(arg robot_fake_controllers)"/>
   </include>
 
-  <include if="$(arg use_moveit_rviz)" file="$(find robotic_arm_moveit)/launch/moveit_rviz.launch" ns="$(arg robot_name)">
+  <include if="$(arg use_moveit_rviz)" file="$(arg moveit_rviz_launch)" ns="$(arg robot_name)">
+    <arg name="kinematics_yaml"                   value="$(arg kinematics_yaml)"/>
     <arg name="rviz_frame"                        value="$(arg rviz_frame)"/>
     <arg name="config"                            value="true"/>
   </include>

@@ -1,0 +1,3 @@
+<launch>
+    <rosparam command="load"        file="/home/karagk/Workspaces/intrarobots_ws/src/master/config/arguments.yaml"/>
+<launch/>
