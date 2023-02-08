@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 import rospy
+from moveit_msgs.msg import Grasp, PlaceLocation
+from geometry_msgs.msg import Pose,PoseStamped
 from sensor_msgs.msg import LaserScan, Range, Image, JointState, PointCloud2, PointField
 from sensor_msgs import point_cloud2
 from control_msgs.msg import JointTrajectoryControllerState
-from std_msgs.msg import String
+from std_msgs.msg import String,Header
 from std_msgs.msg import Float64
 import socket, pickle
 import numpy as np
@@ -14,7 +16,7 @@ import cv2
 from cv_bridge import CvBridge
 import random
 from tf.transformations import quaternion_from_euler
-from custom_messages.msg import *
+# from custom_messages.msg import *
 import open3d
 import struct
 import colorsys
@@ -26,11 +28,16 @@ exev_status_code = 0
 exev_status_text = ''
 ROBOT_NAME = 'panda'
 
-go_to_pose_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/go_to_pose_command",GoToPoseCommand,queue_size=1)
-move_gripper_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/move_gripper_command",MoveGripperCommand,queue_size=1)
+# go_to_pose_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/go_to_pose_command",GoToPoseCommand,queue_size=1)
+# move_gripper_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/move_gripper_command",MoveGripperCommand,queue_size=1)
+
+pick_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/pick_command",Grasp,queue_size=10)
+place_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/place_command",PlaceLocation,queue_size=10)
 
 class Master:
-    def __init__(self):
+    def __init__(self,robot_name=ROBOT_NAME):
+        self.robot_name = robot_name
+        self.seq = 0
         self.ptc1 = -1
         self.ptc2 = -1
         self.ptc = -1
@@ -47,7 +54,6 @@ class Master:
         T[0:3,3] = translation_vector
         self.transformation = T
 
-
     def transformation_matrix(self,pose1,pose0=(0,0,0,0,0,0)):
         (x0,y0,z0,roll0,pitch0,yaw0) = pose0
         (x1,y1,z1,roll1,pitch1,yaw1) = pose1
@@ -60,7 +66,6 @@ class Master:
         T[0:3,3] = translation_vector
 
         return T
-
 
     def combine_ptcs(self,ptc1,ptc2):
         t0 = time.time()
@@ -84,7 +89,6 @@ class Master:
         print("Exec time for combine_ptc:",time.time()-t0)
         open3d.visualization.draw_geometries([ptc])
         return ptc
-
 
     def get_red_objects(self,ptc):
 
@@ -179,7 +183,7 @@ class Master:
         open3d.visualization.draw_geometries([a])
 
         return 
-            
+
     def pt2_to_o3d(self,msg,scan_by_color=False):
         t0 = time.time()
 
@@ -288,12 +292,48 @@ class Master:
         hull_ls.paint_uniform_color((1, 0, 0))
         open3d.visualization.draw_geometries([ptc, hull_ls])
 
+    def publish_pick_command(self,pick_pose,obj_id=0):
+        pose = create_pose_msg(pick_pose)
+        pose_stamped = PoseStamped()
+        pose_stamped.pose = pose
+        
+        header = Header()
+        header.frame_id = str(self.robot_name) + '_' + str(obj_id)
+        header.seq = self.seq
+        self.seq += 1
+        now = rospy.get_rostime()
+        header.stamp.secs = now.secs
+        header.stamp.nsecs = now.nsecs
+        pose_stamped.header = header
 
+        grasp_msg = Grasp()
+        grasp_msg.id = str(self.robot_name) + '_' + str(obj_id)
+        grasp_msg.grasp_pose = pose_stamped
+        pick_command_publisher.publish(grasp_msg)
+
+    def publish_place_command(self,place_pose,obj_id=0):
+        pose = create_pose_msg(place_pose)
+        pose_stamped = PoseStamped()
+        pose_stamped.pose = pose
+        
+        header = Header()
+        header.frame_id = str(self.robot_name) + '_' + str(obj_id)
+        header.seq = self.seq
+        self.seq += 1
+        now = rospy.get_rostime()
+        header.stamp.secs = now.secs
+        header.stamp.nsecs = now.nsecs
+        pose_stamped.header = header
+
+        place_msg = PlaceLocation()
+        place_msg.id = str(self.robot_name) + '_' + str(obj_id)
+        place_msg.place_pose = pose_stamped
+        place_command_publisher.publish(place_msg)
 
 
 def create_pose_msg(pose_goal_raw):
     quat = quaternion_from_euler(pose_goal_raw[3], pose_goal_raw[4], pose_goal_raw[5])
-    pose = geometry_msgs.msg.Pose()
+    pose = Pose()
     pose.position.x = pose_goal_raw[0]
     pose.position.y = pose_goal_raw[1]
     pose.position.z = pose_goal_raw[2]
@@ -642,15 +682,20 @@ master = Master()
 
 def main():
     rospy.init_node('robot_state_publisher') #this is an existing topic
-    
+    x,y,z = 0.131, 0.453, 0.14
+    theta = get_gripper_angle(x,y)
+    pose_euler = (x,y,z,0,np.pi,theta)
+    master.publish_pick_command(pose_euler)
+    master.publish_place_command(pose_euler)
     rospy.spin()
 
 COLOR_IMAGE_TOPIC = '/camera/color/image_raw'
 POINT_CLOUD_TOPIC1 = '/camera/depth/points'
 POINT_CLOUD_TOPIC2 = '/camera2/depth/points'
 
-point_cloud_subscriber1 = rospy.Subscriber(POINT_CLOUD_TOPIC1, PointCloud2, master.read_camera1)
-point_cloud_subscriber2 = rospy.Subscriber(POINT_CLOUD_TOPIC2, PointCloud2, master.read_camera2)
+# point_cloud_subscriber1 = rospy.Subscriber(POINT_CLOUD_TOPIC1, PointCloud2, master.read_camera1)
+# point_cloud_subscriber2 = rospy.Subscriber(POINT_CLOUD_TOPIC2, PointCloud2, master.read_camera2)
+
 # sub = rospy.Subscriber(COLOR_IMAGE_TOPIC, Image, read_camera) # Camera sensor, Image is the data type sensor_msgs/Image
 # sub2 = rospy.Subscriber("/"+ROBOT_NAME+"/move_group/result", MoveGroupActionResult, execution_status)
 

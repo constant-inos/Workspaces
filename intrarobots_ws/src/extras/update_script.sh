@@ -9,9 +9,8 @@ f="$(basename -- $object)"
 sudo chmod -R +rwx $gazebo_models_folder/$f
 done
 
-homedir='/home/ntinos'
-homedir='/home/karagk'
-# homedir=~
+username=$(whoami)
+homedir='/home/$username'
 
 my_world_path='./worlds'
 gazebo_world_path=$homedir/'interbotix_ws/src/interbotix_ros_manipulators/interbotix_ros_xsarms/interbotix_xsarm_gazebo'

@@ -1,0 +1,200 @@
+
+<?xml version="1.0" ?>
+<sdf version="1.5">
+ <world name="default">
+
+   <gui>
+     <camera name='gzclient_camera'>
+       <pose>2.07 -1.52 2.17 0 0.62 2.4</pose>
+     </camera>
+   </gui>
+
+   <physics type="ode">
+     <max_step_size>0.001</max_step_size>
+     <implicit_spring_damper>true</implicit_spring_damper>
+   </physics>
+
+   <!-- A global light source -->
+   <include>
+     <uri>model://sun</uri>
+   </include>
+   <!-- A ground plane -->
+   <include>
+     <uri>model://ground_plane</uri>
+   </include>
+   
+   <include>
+     <uri>model://table_short</uri>
+     <pose>0.1 0.54 0.05 0 0 0</pose>
+   </include>
+
+   <include>
+     <uri>model://chessboard</uri>
+     <name>chessboard</name>
+     <!-- <pose>0.1 0.5 0.05 0 0 0</pose> -->
+     <pose>0 0.32 1.095 0 -0 1.5708</pose>
+   </include>
+
+   <include>
+     <uri>model://bishop_black</uri>
+     <name>bishop_black0</name>
+     <pose>0.056 0.19 1.105 0 -0 3.1415</pose>
+   </include>
+   <include>
+     <uri>model://bishop_black</uri>
+     <name>bishop_black1</name>
+     <pose>-0.056 0.19 1.105 0 -0 3.1415</pose>
+   </include>
+   <include>
+     <uri>model://bishop_white</uri>
+     <name>bishop_white0</name>
+     <pose>0.056 0.453 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://bishop_white</uri>
+     <name>bishop_white1</name>
+     <pose>-0.056 0.453 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://king_black</uri>
+     <name>king_black0</name>
+     <pose>-0.019 0.19 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://king_white</uri>
+     <name>king_white0</name>
+     <pose>-0.019 0.453 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://knight_black</uri>
+     <name>knight_black0</name>
+     <pose>0.094 0.19 1.105 0 -0 3.1415</pose>
+   </include>
+   <include>
+     <uri>model://knight_black</uri>
+     <name>knight_black1</name>
+     <pose>-0.094 0.19 1.105 0 -0 3.1415</pose>
+   </include>
+   <include>
+     <uri>model://knight_white</uri>
+     <name>knight_white0</name>
+     <pose>0.094 0.453 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://knight_white</uri>
+     <name>knight_white1</name>
+     <pose>-0.094 0.453 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_black</uri>
+     <name>pawn_black0</name>
+     <pose>0.131 0.228 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_black</uri>
+     <name>pawn_black1</name>
+     <pose>0.094 0.228 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_black</uri>
+     <name>pawn_black2</name>
+     <pose>0.056 0.228 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_black</uri>
+     <name>pawn_black3</name>
+     <pose>0.019 0.228 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_black</uri>
+     <name>pawn_black4</name>
+     <pose>-0.019 0.228 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_black</uri>
+     <name>pawn_black5</name>
+     <pose>-0.056 0.228 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_black</uri>
+     <name>pawn_black6</name>
+     <pose>-0.094 0.228 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_black</uri>
+     <name>pawn_black7</name>
+     <pose>-0.131 0.228 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_white8</uri>
+     <name>pawn_white</name>
+     <pose>0.131 0.415 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_white</uri>
+     <name>pawn_white1</name>
+     <pose>0.094 0.415 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_white</uri>
+     <name>pawn_white2</name>
+     <pose>0.056 0.415 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_white</uri>
+     <name>pawn_white3</name>
+     <pose>0.019 0.415 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_white</uri>
+     <name>pawn_white4</name>
+     <pose>-0.019 0.415 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_white</uri>
+     <name>pawn_white5</name>
+     <pose>-0.056 0.415 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_white</uri>
+     <name>pawn_white6</name>
+     <pose>-0.094 0.415 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://pawn_white</uri>
+     <name>pawn_white7</name>
+     <pose>-0.131 0.415 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://queen_black</uri>
+     <name>queen_black0</name>
+     <pose>0.019 0.19 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://queen_white</uri>
+     <name>queen_white0</name>
+     <pose>0.019 0.453 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://rook_black</uri>
+     <name>rook_black0</name>
+     <pose>0.131 0.19 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://rook_black</uri>
+     <name>rook_black1</name>
+     <pose>-0.131 0.19 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://rook_white</uri>
+     <name>rook_white0</name>
+     <pose>0.131 0.453 1.105 0 -0 0</pose>
+   </include>
+   <include>
+     <uri>model://rook_white</uri>
+     <name>rook_white1</name>
+     <pose>-0.131 0.453 1.105 0 -0 0</pose>
+   </include>
+
+ </world>
+</sdf>
