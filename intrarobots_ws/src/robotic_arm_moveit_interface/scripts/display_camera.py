@@ -245,7 +245,11 @@ def read_camera(msg):
     C=0.025/14.0
     cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
     #print("Capturing image...")
-    cv_image = rotate_image(cv_image, 180)
+    # cv_image = rotate_image(cv_image, 180)
+    # cv_image = cv_image[140:270, 160:320]
+
+    # cv_image = cv2.resize(stc=cv_image, dsize=())
+    cv2.imwrite('/home/karagk/Workspaces/temp/chessboard.jpg',cv_image)
     cv2.imshow('Image',cv_image)
     cv2.waitKey(5)
 

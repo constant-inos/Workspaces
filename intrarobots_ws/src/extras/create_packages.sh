@@ -1,3 +1,5 @@
+USER=$(whoami)
+
 cd ~/Workspaces/intrarobots_ws
 catkin_make
 
@@ -17,10 +19,15 @@ catkin_create_pkg robotic_arm_moveit_interface geometry_msgs message_generation 
 
 catkin_create_pkg master robotic_arm_moveit robotic_arm_moveit_interface
 
-cd /home/ntinos/Workspaces/intrarobots_ws/src/robots/panda
+cd /home/$USER/Workspaces/intrarobots_ws/src/robots/panda
 catkin_create_pkg panda_description
 catkin_create_pkg panda_gazebo
 catkin_create_pkg panda_moveit_config
+
+# cd /home/$USER/Workspaces/intrarobots_ws/src/robots/locobot
+# catkin_create_pkg interbotix_xslocobot_descriptions joint_state_publisher joint_state_publisher_gui robot_state_publisher roslaunch rviz tf2_ros xacro
+# catkin_create_pkg interbotix_xslocobot_gazebo controller_manager effort_controllers gazebo_ros gazebo_ros_control interbotix_xslocobot_descriptions joint_state_controller joint_trajectory_controller
+
 
 cd ~/Workspaces/intrarobots_ws
 catkin_make
