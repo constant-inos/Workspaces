@@ -99,7 +99,7 @@
 
     <node if="$(arg moveit_interface_gui)"
       name="moveit_interface_gui"
-      pkg="interbotix_moveit_interface"
+      pkg="robotic_arm_moveit_interface"
       type="moveit_interface_gui"
       output="screen"
       ns="$(arg robot_name)"/>

@@ -18,13 +18,13 @@ import cv2
 from cv_bridge import CvBridge
 import random
 from tf.transformations import quaternion_from_euler
-# from custom_messages.msg import *
 import open3d
 import struct
 import colorsys
 from sklearn.cluster import DBSCAN
 import time 
 
+from ultralytics import YOLO
 
 bridge = CvBridge()
 exev_status_code = 0
@@ -32,6 +32,10 @@ exev_status_text = ''
 ROBOT_NAME = 'panda'
 
 pick_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/pick_command",Grasp,queue_size=10)
+
+weights = 'yolov8n.pt'
+model = YOLO(weights)
+
 
 class Master:
     def __init__(self,robot_name=ROBOT_NAME):
@@ -239,19 +243,14 @@ def create_pose_msg(pose_goal_raw):
     return pose
 
 
-        
-
 def read_camera(msg):
     C=0.025/14.0
     cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-    #print("Capturing image...")
+    print("Capturing image...")
     # cv_image = rotate_image(cv_image, 180)
     # cv_image = cv_image[140:270, 160:320]
-
-    # cv_image = cv2.resize(stc=cv_image, dsize=())
-    cv2.imwrite('/home/karagk/Workspaces/temp/chessboard.jpg',cv_image)
-    cv2.imshow('Image',cv_image)
-    cv2.waitKey(5)
+    cv_image = inference(cv_image)
+    # cv2.imshow('Image',cv_image)
 
 
 def rotate_image(image, angle):
@@ -260,6 +259,28 @@ def rotate_image(image, angle):
   result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
   return result
 
+def inference(img):
+
+    (X0,Y0) = img.shape[:2]
+
+    objects = []
+    t0 = time.time()
+    pred = model.predict(img)
+    n_boxes = len(pred[0].boxes)
+    [X,Y] = [int(x) for x in pred[0].boxes.orig_shape]
+
+    for i in range(n_boxes):
+        box = pred[0].boxes[i]
+        conf = float(box.conf)
+        [x1,y1,x2,y2] = [int(x) for x in box.xyxy[0]]
+        det_class = int(box.cls)
+        x1,x2,y1,y2 = int(x1/X*X0),int(x2/X*X0),int(y1/Y*Y0),int(y2/Y*Y0)
+        img = cv2.rectangle(img, (x1,y1), (x2,y2), (255, 0, 0), 2)
+
+    print(img.shape)
+    print(x1,y1,x2,y2)
+    cv2.imshow('Image',img)
+    cv2.waitKey(5)
 
 
 def main():
