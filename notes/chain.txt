@@ -1,0 +1,36 @@
+LAUNCH: (interbotix_xslocobot_moveit_interface) xslocobot_moveit_interface.launch
+
+    LAUNCH: (interbotix_xslocobot_moveit) xslocobot_moveit.launch
+
+        LAUNCH: (interbotix_xslocobot_gazebo) xslocobot_gazebo.launch
+
+            ROSPARAM: "$(find interbotix_xslocobot_gazebo)/config/locobot_gazebo_controllers.yaml" 
+
+            LAUNCH: (gazebo_ros) empty_world.launch
+
+            ROSPARAM: "$(find interbotix_xslocobot_gazebo)/config/trajectory_controllers/$(arg arm_model)_trajectory_controllers.yaml"
+            NODE: (controller_manager) controller_manager
+                ARGS: "spawn arm_controller gripper_controller pan_controller tilt_controller joint_state_controller"
+
+            LAUNCH: (interbotix_xslocobot_descriptions) xslocobot_description.launch
+
+                PARAM: robot_description
+
+                NODE: (robot_state_publisher) robot_state_publisher
+
+                NODE: (rviz) rviz 
+                    ARGS: "-f $(arg rviz_frame) -d $(arg rvizconfig)"
+
+            NODE: (gazebo_ros) spawn_model
+                ARGS: "-urdf -model $(arg robot_name) -param robot_description"
+
+        LAUNCH: (interbotix_xslocobot_moveit) move_group.launch
+            ...
+        LAUNCH: (interbotix_xslocobot_moveit) moveit_rviz.launch
+
+            NODE: (rviz) rviz
+                ARGS: "$(arg command_args)"
+                ROSPARAM: "$(find interbotix_xslocobot_moveit)/config/kinematics.yaml"
+
+    NODE: (interbotix_moveit_interface) moveit_python_interface
+        ROSPARAM: "$(find interbotix_xslocobot_moveit_interface)/config/$(arg robot_model).yaml"

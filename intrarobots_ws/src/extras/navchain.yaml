@@ -1,0 +1,14 @@
+LAUNCH: (interbotix_xslocobot_nav) xslocobot_nav_sim.launch
+
+    LAUNCH: (interbotix_xslocobot_gazebo) xslocobot_gazebo.launch
+
+    NODE: (nodelet) nodelet
+        ARGS: "standalone rtabmap_ros/point_cloud_xyzrgb"
+
+    NODE: (nodelet) nodelet
+        ARGS: "standalone rtabmap_ros/obstacles_detection"
+
+    NODE: (rtabmap_ros) rtabmap
+        ARGS: "$(arg rtabmap_default_args)"
+
+    NODE: (move_base) move_base
