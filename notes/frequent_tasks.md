@@ -6,3 +6,8 @@ rosservice call /gazebo/unpause_physics
 
 # Control Velocities from keyboard
 rosrun teleop_twist_keyboard teleop_twist_keyboard.py /cmd_vel:=/locobot/cmd_vel
+
+# python_moveit_interface Node
+rosrun interbotix_xslocobot_moveit_interface python_moveit_interface _robot_model:='locobot_wx200'     
+
+/home/ntinos/interbotix_ws/src/interbotix_ros_rovers/interbotix_ros_xslocobots/examples/interbotix_xslocobot_moveit_interface/config/locobot_wx200.yaml
