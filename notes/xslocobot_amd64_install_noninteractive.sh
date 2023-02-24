@@ -29,7 +29,7 @@ JAMMY_VALID_DISTROS=('humble')
 
 VALID_BASE_TYPES=('kobuki' 'create3')
 
-NONINTERACTIVE=false
+NONINTERACTIVE=true
 DISTRO_SET_FROM_CL=false
 INSTALL_PATH=~/interbotix_ws
 REALSENSE_WS=~/realsense_ws
