@@ -1,0 +1,2 @@
+franka_description:master:robotic_arm_descriptions:robotic_arm_gazebo:robotic_arm_moveit:robotic_arm_moveit_interface:robots/panda/panda_description:robots/panda/panda_gazebo:robots/panda/panda_moveit_config
+-DCATKIN_DEVEL_PREFIX=/home/ntinos/Workspaces/intrarobots_ws/devel -DCMAKE_INSTALL_PREFIX=/home/ntinos/Workspaces/intrarobots_ws/install -G Unix Makefiles

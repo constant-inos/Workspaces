@@ -8,7 +8,6 @@ project(robotic_arm_moveit_interface)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  custom_messages
   geometry_msgs
   message_generation
   moveit_commander
@@ -112,7 +111,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES robotic_arm_moveit_interface
-#  CATKIN_DEPENDS custom_messages geometry_msgs message_generation moveit_commander moveit_ros_planning_interface moveit_visual_tools roscpp rospy std_msgs tf
+#  CATKIN_DEPENDS geometry_msgs message_generation moveit_commander moveit_ros_planning_interface moveit_visual_tools roscpp rospy std_msgs tf
 #  DEPENDS system_lib
 )
 
