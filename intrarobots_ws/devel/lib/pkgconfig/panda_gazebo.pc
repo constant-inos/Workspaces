@@ -1,8 +1,0 @@
-prefix=/home/ntinos/Workspaces/intrarobots_ws/devel
-
-Name: panda_gazebo
-Description: Description of panda_gazebo
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 
