@@ -17,7 +17,7 @@ catkin_create_pkg robotic_arm_moveit_interface geometry_msgs message_generation 
 
 catkin_create_pkg master robotic_arm_moveit robotic_arm_moveit_interface
 
-cd /home/$USER/Workspaces/intrarobots_ws/src/robots/panda
+cd ~/Workspaces/intrarobots_ws/src/robots/panda
 catkin_create_pkg panda_description
 catkin_create_pkg panda_gazebo
 catkin_create_pkg panda_moveit_config
