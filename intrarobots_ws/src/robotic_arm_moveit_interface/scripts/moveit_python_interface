@@ -75,7 +75,7 @@ class Controller(object):
     group_name2 = "interbotix_gripper"
     self.group = moveit_commander.MoveGroupCommander(group_name)
     self.group2 = moveit_commander.MoveGroupCommander(group_name2)
-    # self.group.set_max_velocity_scaling_factor(value=0.5)
+    self.group.set_max_velocity_scaling_factor(value=0.5)
 
     # self.group.allow_replanning(True)
     # self.group.set_goal_tolerance(0.005)
@@ -104,6 +104,9 @@ class Controller(object):
     self.pick_command = None
     self.place_command = None
 
+    self.tasks = [] # [id, grasp_pose, place_pose, done,attempts]
+    self.ptr = {} # { id: ptr_to_tasks_list }
+
     # self.client = actionlib.SimpleActionClient('/locobot/move_base',MoveBaseAction)
     # self.client.wait_for_server()
 
@@ -112,7 +115,7 @@ class Controller(object):
     plan = group.go(wait=True)
     group.stop()
     group.clear_pose_targets()
-    return
+    return True
 
   def move_base_cmd(self):
     goal = MoveBaseGoal()
@@ -141,45 +144,75 @@ class Controller(object):
       print("Something was lost")
       return
     print("Place Command Received")
-
+   
     grasp_pose = self.pick_command.grasp_pose.pose
     place_pose = self.place_command.place_pose.pose
 
-    above_target = self.pick_command.grasp_pose.pose
-    above_target.position.z += 0.15
+    id = str(round(grasp_pose.position.x,2)).replace('.','')+str(round(grasp_pose.position.y,2)).replace('.','')
+    task = [id,grasp_pose,place_pose,False,0]
+    
+    if (id not in self.ptr): # if not tried that task before
+      self.tasks.append(task)
+      self.ptr[id] = len(self.tasks)-1
+    if self.tasks[self.ptr[id]][3] == True: # done or not
+        return
+
+    # if new task, do this
+    self.pick_and_place(id)
+
+
+    return
+
+  def pick_and_place(self,task_id=-1):
+    # if task_if==-1, we have to sample a task from the list self.tasks
+    if task_id != -1: 
+      ptr = self.ptr[task_id]
+      [id,grasp_pose,place_pose,done,attempts] = self.tasks[ptr]
+    else:
+      for i in range(len(self.tasks)):
+        [id,grasp_pose,place_pose,done,attempts] = self.tasks[i]
+        if done or ( not done and attempts>1): return
+        if not done and attempts==0:
+          task_id = id 
+          break
+        if not done and attempts==1:
+          task_id = id
+          grasp_pose.position.x += 0.01
+          grasp_pose.position.y += 0.01
+          break
+      task_id = id  
+
+    print("&"*200)
+    print("TASKS LIST:")
+    for i in range(len(self.tasks)):
+      print(f"ID: {self.tasks[i][0]}, X: {self.tasks[i][1].position.x}, Y: {self.tasks[i][1].position.y}, DONE: {self.tasks[i][3]}, ATTEMPTS: {self.tasks[i][4]}")
+
+    above_target = Pose()
+    above_target.position.x = grasp_pose.position.x
+    above_target.position.y = grasp_pose.position.y
+    above_target.position.z = grasp_pose.position.z + 0.15
+    above_target.orientation = grasp_pose.orientation
 
     print("Going above target")
     self.set_pose_goal_quat(above_target)
-    self.go_to_pose_goal()
+    if self.go_to_pose_goal():
+      if self.go_to_named_pose("Open",group=self.group2):
+        print("Going to grasp pose")
+        self.set_pose_goal_quat(grasp_pose)
+        if self.go_to_pose_goal():
+          if self.go_to_named_pose("Closed",group=self.group2):
+            print("Going to place pose")
+            self.set_pose_goal_quat(place_pose)
+            if self.go_to_pose_goal():
+              if self.go_to_named_pose("Open",group=self.group2):
+                print("Complete Pick n Place Routine")
+                done = True
 
-    # if not all_close(above_target, self.group.get_current_joint_values(), 0.03):
-    #   print("PROBLEM 1")
-
-    self.go_to_named_pose("Open",group=self.group2)
-    self.group2.set_named_target("Open")
-
-    grasp_pose = above_target
-    grasp_pose.position.z -= 0.15
-    print(self.group.get_current_pose())
-    print("Going to grasp pose")
-    self.set_pose_goal_quat(grasp_pose)
-    self.go_to_pose_goal()
-
-    self.go_to_named_pose("Closed",group=self.group2)
-    self.group2.set_named_target("Closed")
-
-    print("Going to place pose")
-    self.set_pose_goal_quat(place_pose)
-    self.go_to_pose_goal()
-
-    self.go_to_named_pose("Open",group=self.group2)
-    self.group2.set_named_target("Open")
+    self.tasks[self.ptr[task_id]][3] = done
+    self.tasks[self.ptr[task_id]][4] += 1
 
     self.go_to_named_pose("Sleep",group=self.group)
     self.group.set_named_target("Sleep")
-
-    # all_close(self.joint_goal, self.group.get_current_joint_values(), 0.01)
-    return
 
   def pose_euler2quaternion(self,pose_euler):
       quat = quaternion_from_euler(pose_euler[3], pose_euler[4], pose_euler[5])
@@ -225,7 +258,7 @@ class Controller(object):
     self.group.clear_pose_targets()
 
     current_pose = self.group.get_current_pose().pose
-    return all_close(self.pose_goal, current_pose, 0.01)
+    return all_close(self.pose_goal, current_pose, 0.03)
 
   def go_to_defined_pose(self, msg):
       self.set_command_status(msg.command_id)

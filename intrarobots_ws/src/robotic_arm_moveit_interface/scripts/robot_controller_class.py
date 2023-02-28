@@ -33,8 +33,8 @@ ROBOT_NAME = 'wx200'
 # go_to_pose_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/go_to_pose_command",GoToPoseCommand,queue_size=1)
 # move_gripper_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/move_gripper_command",MoveGripperCommand,queue_size=1)
 
-pick_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/pick_command",Grasp,queue_size=10)
-place_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/place_command",PlaceLocation,queue_size=10)
+pick_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/pick_command",Grasp,queue_size=1)
+place_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/place_command",PlaceLocation,queue_size=1)
 
 class Master:
     def __init__(self,robot_name=ROBOT_NAME):
@@ -152,51 +152,57 @@ class Master:
             print(" ")
 
     def read_ptc(self,msg):
-        if self.f: return
-        # ptc = self.pt2_to_o3d(msg,scan_by_color=False)
-        # ptc = self.transform(ptc)
+        print("Reading Point Cloud...")
+        ptc = self.pt2_to_o3d(msg,scan_by_color=False)
+        print("Point Cloud transformation to robot frame...")
+        ptc = self.transform(ptc)
 
-        ptc,reds,greens = self.pt2_to_o3d(msg,scan_by_color=True)
-        if len(list(reds.points)) ==0:
-            print("try again madafacka")
-            return
-        
-        ptc = self.transform(reds)
-        print(np.array(ptc.points))
-        bbox = open3d.geometry.AxisAlignedBoundingBox(min_bound=(-1,-1, 0.11), max_bound=(1,1, 0.5))
-        ptc.crop(bbox)
+        print("Cropping region of interest...")
+        bbox = open3d.geometry.AxisAlignedBoundingBox(min_bound=(-1,-1, 0.12), max_bound=(1,1, 0.5))
+        ptc = ptc.crop(bbox)
+        # open3d.visualization.draw_geometries([ptc1])
 
+        print("Clustering 3d points...")
         objects = self.cluster_objects_3d(ptc)
-        
+
+        print(f"Recognised {len(objects)} objects.")
+
+        x0, y0,z0 ,_ ,_ ,_ = master.base_frame # Arm's base position relative to (0,0,0)
+        theta = get_gripper_angle(-0.35,0.35,x0,y0)
+        red_bucket = (-0.35,0.35,0.3,0,0,theta)            
+
+        theta = get_gripper_angle(-0.35,-0.35,x0,y0)
+        green_bucket = (-0.35,-0.35,0.3,0,0,theta)
             
-        # Arm's base position relative to (0,0,0)
-        x0, y0,z0 ,_ ,_ ,_ = master.base_frame
-        for o in objects:
+        for i,o in enumerate(objects):           
             r = np.array(o.points)
             x,y,z = np.mean(r[:,0]),np.mean(r[:,1]),np.mean(r[:,2])
             theta = get_gripper_angle(x,y,x0,y0)
             grab_pose_euler = (x,y,z,0,0,theta)
-            print(grab_pose_euler)
 
-            theta = get_gripper_angle(-0.35,0.35,x0,y0)
-            place_pose_euler = (-0.35,0.35,0.3,0,0,theta)
+            c = np.array(o.colors)
+            r,g,b = np.mean(c[:,0]),np.mean(c[:,1]),np.mean(c[:,2])
+            color = 'Unrecognised'
+            if is_red(r,g,b): 
+                color = 'Red'
+                place_pose_euler = red_bucket
+            if is_green(r,g,b): 
+                color = 'Green'
+                place_pose_euler = green_bucket
+            
+            print(f" -- Object: x={x}, y={y}, color={color}")
 
-            print(1)
-            master.publish_pick_command(grab_pose_euler)
-            print(2)
-            master.publish_place_command(place_pose_euler)
-            print(3)
-        rospy.sleep(10)
-        self.f = True
+            if color == 'Unrecognised': continue
+            
+            master.publish_pick_command(grab_pose_euler,obj_id=i)
+            master.publish_place_command(place_pose_euler,obj_id=i)
+            print("Published Object's details.")
 
-
+        # rospy.sleep(10)
 
         # mesh_frame = open3d.geometry.TriangleMesh.create_coordinate_frame(size=0.6, origin=[0,0,0])
         # open3d.visualization.draw_geometries([reds,mesh_frame])
         # open3d.visualization.draw_geometries([ptc,mesh_frame])
-
-        
-
         return 
 
     def get_gripper_orientation(self,object_points):
@@ -341,13 +347,6 @@ class Master:
         
         return clusters
 
-    def convex_hull(self,ptc):
-        # pcl = mesh.sample_points_poisson_disk(number_of_points=2000)
-        hull, _ = ptc.compute_convex_hull()
-        hull_ls = open3d.geometry.LineSet.create_from_triangle_mesh(hull)
-        hull_ls.paint_uniform_color((1, 0, 0))
-        open3d.visualization.draw_geometries([ptc, hull_ls])
-
     def publish_pick_command(self,pick_pose,obj_id=0):
         pose = create_pose_msg(pick_pose)
         pose_stamped = PoseStamped()
@@ -397,100 +396,6 @@ def create_pose_msg(pose_goal_raw):
     pose.orientation.z = quat[2]
     pose.orientation.w = quat[3]
     return pose
-
-def move_to_specified_pose(value):
-
-    print("Moving to Specified Pose")
-
-    x,y,z = value
-    theta = get_gripper_angle(x,y)
-    pose_euler = [x,y,z,np.pi/2,np.pi,theta]
-    pose_quat = create_pose_msg(pose_euler)
-    
-    msg = GoToPoseCommand()
-    msg.robot_name = ROBOT_NAME
-    msg.target_pose = pose_quat
-    uid = str(type(msg))+'-'+str(msg.header.seq)
-    msg.command_id = uid
-    go_to_pose_command_publisher.publish(msg)
-
-    result = await_command_completion(uid)
-    
-    if result == 'SUCCESS':
-        print("Moved to specified pose successfully")
-    
-    return
-
-def control_motor_angles(value):
-    arr=[]
-    arr.append("control_motor_angles")
-    arr.append(value)
-    # send_socket_msg(arr)
-
-def open_gripper():
-    print("Opening Gripper")
-    msg = MoveGripperCommand()
-    msg.robot_name = ROBOT_NAME
-    msg.command = 'open'
-    uid = str(type(msg))+'-'+str(msg.header.seq)
-    msg.command_id = uid
-    move_gripper_command_publisher.publish(msg)
-
-    result = await_command_completion(uid)
-    
-    if result == 'SUCCESS':
-        print("Gripper Opened Successfully")
-    
-    return
-
-def close_gripper():
-    print("Closing Gripper")
-    msg = MoveGripperCommand()
-    # msg.robot_name = 'panda'
-    msg.command = 'close'
-    uid = str(type(msg))+'-'+str(msg.header.seq)
-    msg.command_id = uid
-    move_gripper_command_publisher.publish(msg)
-    
-    result = await_command_completion(uid)
-    
-    if result == 'SUCCESS':
-        print("Gripper Closed Successfully")
-
-    return
-
-def await_command_completion(uid):
-    rospy.set_param('/command/uid',uid)
-    rospy.set_param('/command/received',False)
-    rospy.set_param('/command/completed',False)
-    rospy.set_param('/command/success',False)
-
-    while True:
-        received = rospy.get_param('/command/received')
-        completed = rospy.get_param('/command/completed')
-        success = rospy.get_param('/command/success')
-
-        if not received:
-            continue
-        if completed and success:
-            return('SUCCESS')
-        if completed and not success:
-            return('FAILED')
-        
-def ranges_to_polar(ranges,object_r=0.025,angle_inc=0.031733):
-    ranges = list(ranges)
-    cut_ranges = []
-    index_cut_ranges = []
-    for i in range(3):
-        min_range = min(ranges)
-        ind = ranges.index(min_range)
-        cut_ranges.append(min_range)
-        index_cut_ranges.append(ind)
-        ranges[ind] = float('inf')
-
-    d = np.mean(cut_ranges[:3]) + object_r
-    theta = np.mean(index_cut_ranges)*angle_inc
-    return (d,theta)
 
 def get_objects_position(cv_image):
     # hsv format: hue, saturation, value (brightness)
@@ -581,8 +486,8 @@ def pixel2coords(px,py,H=480,W=640):
     return x,y
 
 def is_red(r,g,b):
-    # if r>1.0 or g>1.0 or b>1.0:
-    r,g,b = r/255.0,b/255.0,g/255.0
+    if r>1.0 or g>1.0 or b>1.0:
+        r,g,b = r/255.0,b/255.0,g/255.0
     (h,s,v) = colorsys.rgb_to_hsv(r,g,b)
     (h,s,v) = (h*180,s*255,v*255)
 
@@ -732,7 +637,13 @@ import time
 master = Master()
 
 def main():
-    rospy.init_node('robot_state_publisher') #this is an existing topic
+    
+    while True:
+        rospy.init_node('robot_state_publisher') #this is an existing topic
+        print("Listening to camera topic ...")
+        x = 5/8.0+6.2356
+        rospy.spin()
+
     # x0, y0,z0 ,_ ,_ ,_ = master.base_frame
     #  # Arm's base position relative to (0,0,0)
     # x,y,z = 0.6,0.1,0.31
@@ -744,8 +655,8 @@ def main():
     # master.publish_pick_command(pose_euler)
     # print(2)
     # master.publish_place_command(pose_euler)
-    print(3)
-    rospy.spin()
+    # print(3)
+    # rospy.spin()
 
 COLOR_IMAGE_TOPIC = '/camera/color/image_raw'
 POINT_CLOUD_TOPIC1 = '/locobot/camera/depth_registered/points'
@@ -758,6 +669,5 @@ point_cloud_subscriber1 = rospy.Subscriber(POINT_CLOUD_TOPIC2, PointCloud2, mast
 # sub2 = rospy.Subscriber("/"+ROBOT_NAME+"/move_group/result", MoveGroupActionResult, execution_status)
 
 if __name__ == "__main__":
-    print("Start")
     main()
-    print("End")
+    
