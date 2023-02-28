@@ -22,11 +22,13 @@ import struct
 import colorsys
 from sklearn.cluster import DBSCAN
 import time 
+from scipy.spatial.transform import Rotation
+import copy
 
 bridge = CvBridge()
 exev_status_code = 0
 exev_status_text = ''
-ROBOT_NAME = 'panda'
+ROBOT_NAME = 'wx200'
 
 # go_to_pose_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/go_to_pose_command",GoToPoseCommand,queue_size=1)
 # move_gripper_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/move_gripper_command",MoveGripperCommand,queue_size=1)
@@ -37,6 +39,10 @@ place_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/place_command",PlaceL
 class Master:
     def __init__(self,robot_name=ROBOT_NAME):
         self.robot_name = robot_name
+        # self.base_frame = (0.092, 0, 0.124163, 0, 0, 0)
+        self.base_frame = (0, 0, 0, 0, 0, 0)
+        # self.camera_frame = (0.078643,0.017516,0.487583,-0.000022,0.700871,0.000226)
+        self.camera_frame = (0,0,0.6,0,np.pi/4,0)
         self.seq = 0
         self.ptc1 = -1
         self.ptc2 = -1
@@ -44,28 +50,26 @@ class Master:
         self.transformation = np.eye(4)
         self.i1 = 0
         self.i2 = 0
+        self.f = 0
 
-    def create_transformation(self):
+    def transform(self,ptc1):
         T = np.eye(4)
-        rotation_matrix  = self.ptc1.get_rotation_matrix_from_xyz((3*np.pi/2, 0, 0))
-        a = 0.84*2/np.sqrt(2)
-        translation_vector = [0,-a,a]
-        T[:3, :3] = rotation_matrix
-        T[0:3,3] = translation_vector
-        self.transformation = T
+        T[:3, :3] = ptc1.get_rotation_matrix_from_xyz((np.pi/4, 0, 0))
+        ptc1.transform(T)
 
-    def transformation_matrix(self,pose1,pose0=(0,0,0,0,0,0)):
-        (x0,y0,z0,roll0,pitch0,yaw0) = pose0
-        (x1,y1,z1,roll1,pitch1,yaw1) = pose1
+        T[:3, :3] = ptc1.get_rotation_matrix_from_xyz((np.pi, 0, 0))
+        ptc1.transform(T)
+        
+        T[:3, :3] = ptc1.get_rotation_matrix_from_xyz((0, 0, -np.pi/2))
+        ptc1.transform(T)
 
-        translation_vector = [x1-x0,y1-y0,z1-z0]
-        rotation_matrix  = self.ptc1.get_rotation_matrix_from_xyz((pitch1-pitch0, roll1-roll0,  yaw1-yaw0))
+        T = np.eye(4)        
+        [xc,yc,zc,_,_,_] = self.camera_frame
+        translation_vector = [xc,yc,zc]
+        T[:3,3] = translation_vector
+        ptc1.transform(T)
 
-        T = np.eye(4)
-        T[:3, :3] = rotation_matrix
-        T[0:3,3] = translation_vector
-
-        return T
+        return ptc1
 
     def combine_ptcs(self,ptc1,ptc2):
         t0 = time.time()
@@ -86,8 +90,8 @@ class Master:
         ptc.points = open3d.utility.Vector3dVector(np.array(points))
         ptc.colors = open3d.utility.Vector3dVector(np.array(colors)) 
 
-        print("Exec time for combine_ptc:",time.time()-t0)
-        open3d.visualization.draw_geometries([ptc])
+        # print("Exec time for combine_ptc:",time.time()-t0)
+        # open3d.visualization.draw_geometries([ptc])
         return ptc
 
     def get_red_objects(self,ptc):
@@ -147,6 +151,54 @@ class Master:
             # self.get_gripper_orientation(o[1])
             print(" ")
 
+    def read_ptc(self,msg):
+        if self.f: return
+        # ptc = self.pt2_to_o3d(msg,scan_by_color=False)
+        # ptc = self.transform(ptc)
+
+        ptc,reds,greens = self.pt2_to_o3d(msg,scan_by_color=True)
+        if len(list(reds.points)) ==0:
+            print("try again madafacka")
+            return
+        
+        ptc = self.transform(reds)
+        print(np.array(ptc.points))
+        bbox = open3d.geometry.AxisAlignedBoundingBox(min_bound=(-1,-1, 0.11), max_bound=(1,1, 0.5))
+        ptc.crop(bbox)
+
+        objects = self.cluster_objects_3d(ptc)
+        
+            
+        # Arm's base position relative to (0,0,0)
+        x0, y0,z0 ,_ ,_ ,_ = master.base_frame
+        for o in objects:
+            r = np.array(o.points)
+            x,y,z = np.mean(r[:,0]),np.mean(r[:,1]),np.mean(r[:,2])
+            theta = get_gripper_angle(x,y,x0,y0)
+            grab_pose_euler = (x,y,z,0,0,theta)
+            print(grab_pose_euler)
+
+            theta = get_gripper_angle(-0.35,0.35,x0,y0)
+            place_pose_euler = (-0.35,0.35,0.3,0,0,theta)
+
+            print(1)
+            master.publish_pick_command(grab_pose_euler)
+            print(2)
+            master.publish_place_command(place_pose_euler)
+            print(3)
+        rospy.sleep(10)
+        self.f = True
+
+
+
+        # mesh_frame = open3d.geometry.TriangleMesh.create_coordinate_frame(size=0.6, origin=[0,0,0])
+        # open3d.visualization.draw_geometries([reds,mesh_frame])
+        # open3d.visualization.draw_geometries([ptc,mesh_frame])
+
+        
+
+        return 
+
     def get_gripper_orientation(self,object_points):
         object_points.estimate_normals()
         object_points.orient_normals_consistent_tangent_plane(k=3)
@@ -197,7 +249,7 @@ class Master:
                 PointField(name='g', offset=17, datatype=PointField.UINT8, count=1),
                 PointField(name='r', offset=18, datatype=PointField.UINT8, count=1),
             ]
-        
+
         msg.fields = FIELDS_XYZRGB
 
         points = point_cloud2.read_points(msg,skip_nans=True)
@@ -211,6 +263,7 @@ class Master:
 
         for p in points:
             x,y,z,b,g,r = p      
+            # x,y,z,r,g,b = p      
             # print(z)
             xyz.append((x,y,z))
             rgb.append((r,g,b))
@@ -247,7 +300,10 @@ class Master:
 
         print("Exec time for pt2_to_o3d:",time.time()-t0)
         # open3d.visualization.draw_geometries([reds])
-        return open3d_cloud, reds, greens
+        if scan_by_color:
+            return open3d_cloud, reds, greens
+        else:
+            return open3d_cloud
 
     def cluster_objects_3d(self,point_cloud):
         # input: point cloud
@@ -330,7 +386,6 @@ class Master:
         place_msg.place_pose = pose_stamped
         place_command_publisher.publish(place_msg)
 
-
 def create_pose_msg(pose_goal_raw):
     quat = quaternion_from_euler(pose_goal_raw[3], pose_goal_raw[4], pose_goal_raw[5])
     pose = Pose()
@@ -391,7 +446,7 @@ def open_gripper():
 def close_gripper():
     print("Closing Gripper")
     msg = MoveGripperCommand()
-    msg.robot_name = 'panda'
+    # msg.robot_name = 'panda'
     msg.command = 'close'
     uid = str(type(msg))+'-'+str(msg.header.seq)
     msg.command_id = uid
@@ -597,15 +652,14 @@ def get_object(obj_pixels,color):
 
     move_to_specified_pose(standby_pose)
 
-
-def get_gripper_angle(x,y):
-    if (x<0 and y>0):
-        theta = np.pi - np.arctan(-y/x)
-    elif (x<0 and y<0):
-        theta = -np.pi + np.arctan(y/x)
+def get_gripper_angle(x,y,x0,y0):
+    if ((x-x0)<0 and (y-y0)>0):
+        theta = np.pi - np.arctan(-(y-y0)/(x-x0))
+    elif ((x-x0)<0 and (y-y0)<0):
+        theta = -np.pi + np.arctan((y-y0)/(x-x0))
     else:
         if x == 0: return np.arctan(np.inf)
-        theta = np.arctan(y/x)
+        theta = np.arctan((y-y0)/(x-x0))
     return theta
 
 def execution_status(msg):
@@ -657,9 +711,6 @@ def read_point_cloud2(msg):
             i +=1
     return image
 
-
-
-
 def get_point_cloud(msg):
 
     # image = read_point_cloud2(msg)
@@ -682,22 +733,31 @@ master = Master()
 
 def main():
     rospy.init_node('robot_state_publisher') #this is an existing topic
-    x,y,z = 0.131, 0.453, 0.14
-    theta = get_gripper_angle(x,y)
-    pose_euler = (x,y,z,0,np.pi,theta)
-    master.publish_pick_command(pose_euler)
-    master.publish_place_command(pose_euler)
+    # x0, y0,z0 ,_ ,_ ,_ = master.base_frame
+    #  # Arm's base position relative to (0,0,0)
+    # x,y,z = 0.6,0.1,0.31
+    # theta = get_gripper_angle(x,y,x0,y0)
+    # pose_euler = (x,y,z,0,0,theta)
+    # print("Pyblished Pose:",pose_euler)
+
+    # print(1)
+    # master.publish_pick_command(pose_euler)
+    # print(2)
+    # master.publish_place_command(pose_euler)
+    print(3)
     rospy.spin()
 
 COLOR_IMAGE_TOPIC = '/camera/color/image_raw'
-POINT_CLOUD_TOPIC1 = '/camera/depth/points'
-POINT_CLOUD_TOPIC2 = '/camera2/depth/points'
+POINT_CLOUD_TOPIC1 = '/locobot/camera/depth_registered/points'
+POINT_CLOUD_TOPIC2 = '/camera/depth/points'
 
-# point_cloud_subscriber1 = rospy.Subscriber(POINT_CLOUD_TOPIC1, PointCloud2, master.read_camera1)
+point_cloud_subscriber1 = rospy.Subscriber(POINT_CLOUD_TOPIC2, PointCloud2, master.read_ptc)
 # point_cloud_subscriber2 = rospy.Subscriber(POINT_CLOUD_TOPIC2, PointCloud2, master.read_camera2)
 
 # sub = rospy.Subscriber(COLOR_IMAGE_TOPIC, Image, read_camera) # Camera sensor, Image is the data type sensor_msgs/Image
 # sub2 = rospy.Subscriber("/"+ROBOT_NAME+"/move_group/result", MoveGroupActionResult, execution_status)
 
 if __name__ == "__main__":
+    print("Start")
     main()
+    print("End")

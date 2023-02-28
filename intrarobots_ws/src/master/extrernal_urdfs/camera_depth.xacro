@@ -4,10 +4,10 @@
   <joint name="camera_joint" type="fixed">
       <axis xyz="0 1 0" />
       <!-- <origin rpy="0 ${pi/2} 0" xyz="0 0.54 0.8" /> -->
-      <origin rpy="${pi} ${3*pi/4} 0" xyz="0.4 0.3 0.35" />
+      <origin rpy="0 ${pi/4} 0" xyz="0 0 0.6" />
       <!--parent link fixed-->
-      <!-- <parent link="$(arg robot_name)/base_link"/> -->
-      <parent link="$(arg base_link_frame)"/>
+      <parent link="wx200/base_link"/>
+      <!-- <parent link="$(arg base_link_frame)"/> -->
       <child link="camera_link"/>
   </joint>
 

@@ -4,6 +4,7 @@ import sys
 import copy
 import rospy
 import random
+import time
 import moveit_commander
 import moveit_msgs.msg
 import geometry_msgs.msg
@@ -23,6 +24,8 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import LaserScan
 import socket, pickle
+import actionlib 
+# from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 
 def all_close(goal, actual, tolerance):
@@ -64,28 +67,31 @@ class Controller(object):
 
     ## Instantiate a `RobotCommander`_ object. This object is the outer-level interface to the robot:
     self.robot = moveit_commander.RobotCommander()
-    print("="*50)
-    for group in self.robot.get_group_names():
-      print(group)
-      try:
-        print("End Effector Link:",group.get_end_effector_link())
-      except  Exception as e:
-        print(e)
 
     ## Instantiate a `PlanningSceneInterface`_ object.  This object is an interface to the world surrounding the robot:
     self.scene = moveit_commander.PlanningSceneInterface()
 
-    group_name = "panda_manipulator"
-    group_name2 = "panda_hand"
+    group_name = "interbotix_arm"
+    group_name2 = "interbotix_gripper"
     self.group = moveit_commander.MoveGroupCommander(group_name)
     self.group2 = moveit_commander.MoveGroupCommander(group_name2)
-    self.group.set_max_velocity_scaling_factor(value=0.5)
+    # self.group.set_max_velocity_scaling_factor(value=0.5)
+
+    # self.group.allow_replanning(True)
+    # self.group.set_goal_tolerance(0.005)
+    # self.group.set_num_planning_attempts(planning_attempts)
+    self.group.set_planning_time(20)
+
+
+    
     ## We create a `DisplayTrajectory`_ publisher which is used later to publish
     ## trajectories for RViz to visualize:
     self.display_trajectory_publisher = rospy.Publisher("move_group/display_planned_path",
                                                    moveit_msgs.msg.DisplayTrajectory,
                                                    queue_size=20)
-
+    # self.camera_tilt_publisher = rospy.Publisher(f"/{self.robot_name}/tilt_controller/command",Float64,queue_size=20)
+    self.camera_tilt_publisher = rospy.Publisher("/locobot/tilt_controller/command",Float64,queue_size=20)
+    
 
     ## Getting Basic Information
     # We can get the name of the reference frame for this robot:
@@ -95,17 +101,40 @@ class Controller(object):
     # We can get a list of all the groups in the robot:
     self.group_names = self.robot.get_group_names()
 
-    # self.go_to_pose_confirmation = rospy.Publisher("/"+self.robot_name+"/go_to_pose_confirmation",GoToPoseConfirmation,queue_size=1)
-    # self.move_gripper_confirmation = rospy.Publisher("/"+self.robot_name+"/go_to_pose_confirmation",MoveGripperConfirmation,queue_size=1)
-
     self.pick_command = None
     self.place_command = None
 
+    # self.client = actionlib.SimpleActionClient('/locobot/move_base',MoveBaseAction)
+    # self.client.wait_for_server()
+
+  def go_to_named_pose(self,pose_name,group):
+    group.set_named_target(pose_name)
+    plan = group.go(wait=True)
+    group.stop()
+    group.clear_pose_targets()
+    return
+
+  def move_base_cmd(self):
+    goal = MoveBaseGoal()
+    goal.target_pose.header.frame_id = "map"
+    goal.target_pose.header.stamp = rospy.Time.now()
+    # Move 0.5 meters forward along the x axis of the "map" coordinate frame 
+    goal.target_pose.pose.position.x = 2.0
+    # No rotation of the mobile base frame w.r.t. map frame
+    goal.target_pose.pose.orientation.w = 5.0
+    self.client.send_goal(goal)
+    print("Goal")
+    print(goal)
+    wait = self.client.wait_for_result()
+    print(wait)
+
   def update_pick_command(self,msg):
+    print("&"*20)
     self.pick_command = msg
     print("Pick Command Received")
 
   def pick_and_place_routine(self,msg):
+    print("%"*20)
     self.place_command = msg
 
     if self.pick_command and not self.pick_command.id == msg.id: 
@@ -116,13 +145,41 @@ class Controller(object):
     grasp_pose = self.pick_command.grasp_pose.pose
     place_pose = self.place_command.place_pose.pose
 
-    above_target = grasp_pose
+    above_target = self.pick_command.grasp_pose.pose
     above_target.position.z += 0.15
+
+    print("Going above target")
     self.set_pose_goal_quat(above_target)
     self.go_to_pose_goal()
+
+    # if not all_close(above_target, self.group.get_current_joint_values(), 0.03):
+    #   print("PROBLEM 1")
+
+    self.go_to_named_pose("Open",group=self.group2)
+    self.group2.set_named_target("Open")
+
+    grasp_pose = above_target
+    grasp_pose.position.z -= 0.15
+    print(self.group.get_current_pose())
+    print("Going to grasp pose")
+    self.set_pose_goal_quat(grasp_pose)
+    self.go_to_pose_goal()
+
+    self.go_to_named_pose("Closed",group=self.group2)
+    self.group2.set_named_target("Closed")
+
+    print("Going to place pose")
+    self.set_pose_goal_quat(place_pose)
+    self.go_to_pose_goal()
+
+    self.go_to_named_pose("Open",group=self.group2)
+    self.group2.set_named_target("Open")
+
+    self.go_to_named_pose("Sleep",group=self.group)
+    self.group.set_named_target("Sleep")
+
+    # all_close(self.joint_goal, self.group.get_current_joint_values(), 0.01)
     return
-
-
 
   def pose_euler2quaternion(self,pose_euler):
       quat = quaternion_from_euler(pose_euler[3], pose_euler[4], pose_euler[5])
@@ -279,6 +336,9 @@ class Controller(object):
       rospy.set_param('/command/completed',completed)
       rospy.set_param('/command/success',success)
 
+  def set_camera_for_manipulation(self):
+    self.camera_tilt_publisher.publish(0.7)
+
 def send_socket_msg(Message,address="localhost",port=9988):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((address, port))
@@ -288,14 +348,19 @@ def send_socket_msg(Message,address="localhost",port=9988):
 
 def main():
     while True:
+      
       rospy.spin()
 
 controller = Controller()
-print(controller.robot_name,"=========================================================")
-# move_gripper_subscriber = rospy.Subscriber("/"+controller.robot_name+"/move_gripper_command", MoveGripperCommand, controller.move_gripper) 
-# go_to_pose_subsciber = rospy.Subscriber("/"+controller.robot_name+"/go_to_pose_command", GoToPoseCommand, controller.go_to_defined_pose)
+
 pick_command_subsciber = rospy.Subscriber("/"+controller.robot_name+"/pick_command", Grasp, controller.update_pick_command)
 place_command_subsciber = rospy.Subscriber("/"+controller.robot_name+"/place_command", PlaceLocation, controller.pick_and_place_routine)
 
 if __name__ == '__main__':
+    time.sleep(3)
+    # controller.move_base_cmd()
+    # controller.set_camera_for_manipulation()
+    controller.go_to_named_pose('Sleep',group=controller.group)
+    print(controller.robot_name)
+
     main()

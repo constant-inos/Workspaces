@@ -8,7 +8,9 @@ import moveit_commander
 import moveit_msgs.msg
 import geometry_msgs.msg
 ## Import msgs and srvs ##
-from geometry_msgs.msg import PoseStamped
+from moveit_msgs.msg import Grasp, PlaceLocation
+from std_msgs.msg import String, Float64, Header
+from geometry_msgs.msg import Pose,PoseStamped
 from trajectory_msgs.msg import JointTrajectoryPoint
 from moveit_msgs.msg import DisplayTrajectory, Grasp, PlaceLocation
 from moveit_msgs.srv import ApplyPlanningScene
@@ -20,9 +22,8 @@ from moveit_commander.conversions import pose_to_list
 import numpy as np
 import rospy
 from sensor_msgs.msg import LaserScan
-from std_msgs.msg import String
-from std_msgs.msg import Float64
 import socket, pickle
+
 
 def all_close(goal, actual, tolerance):
   """
@@ -45,12 +46,9 @@ def all_close(goal, actual, tolerance):
     return all_close(pose_to_list(goal), pose_to_list(actual), tolerance)
 
   return True
-
+print('='*100)
 class Controller(object):
-
   def __init__(self):
-    # super(MoveGroupPythonIntefaceTutorial, self).__init__()
-    ## First initialize `moveit_commander`_ and a `rospy`_ node:
     moveit_commander.roscpp_initialize(sys.argv)
     rospy.init_node('moveit_python_interface')
     ## Get the name of the robot - this will be used to properly define the end-effector link when adding a box
@@ -64,22 +62,19 @@ class Controller(object):
     print(self.pose_goal)
 
 
-    #self.ee_gripper_link=rospy.get_param("~ee_gripper_link")
-    #print(rospy.get_param(""))
-
     ## Instantiate a `RobotCommander`_ object. This object is the outer-level interface to the robot:
     self.robot = moveit_commander.RobotCommander()
+    print("="*50)
+    for group in self.robot.get_group_names():
+      print(group)
+      try:
+        print("End Effector Link:",group.get_end_effector_link())
+      except  Exception as e:
+        print(e)
 
     ## Instantiate a `PlanningSceneInterface`_ object.  This object is an interface to the world surrounding the robot:
     self.scene = moveit_commander.PlanningSceneInterface()
 
-    ## Instantiate a `MoveGroupCommander`_ object.  This object is an interface
-    ## to one group of joints.  In this case the group is the joints in the Interbotix
-    ## arm so we set ``group_name = interbotix_arm``. If you are using a different robot,
-    ## you should change this value to the name of your robot arm planning group.
-    ## This interface can be used to plan and execute motions on the Interbotix Arm:
-    # group_name = "interbotix_arm"
-    # group_name2 = "interbotix_gripper"
     group_name = "panda_manipulator"
     group_name2 = "panda_hand"
     self.group = moveit_commander.MoveGroupCommander(group_name)
@@ -91,6 +86,7 @@ class Controller(object):
                                                    moveit_msgs.msg.DisplayTrajectory,
                                                    queue_size=20)
 
+
     ## Getting Basic Information
     # We can get the name of the reference frame for this robot:
     self.planning_frame = self.group.get_planning_frame()
@@ -99,22 +95,53 @@ class Controller(object):
     # We can get a list of all the groups in the robot:
     self.group_names = self.robot.get_group_names()
 
-    # self.go_to_pose_goal()
-    # self.go_to_joint_goal()
+    # self.go_to_pose_confirmation = rospy.Publisher("/"+self.robot_name+"/go_to_pose_confirmation",GoToPoseConfirmation,queue_size=1)
+    # self.move_gripper_confirmation = rospy.Publisher("/"+self.robot_name+"/go_to_pose_confirmation",MoveGripperConfirmation,queue_size=1)
+
+    self.pick_command = None
+    self.place_command = None
+
+  def update_pick_command(self,msg):
+    self.pick_command = msg
+    print("Pick Command Received")
+
+  def pick_and_place_routine(self,msg):
+    self.place_command = msg
+
+    if self.pick_command and not self.pick_command.id == msg.id: 
+      print("Something was lost")
+      return
+    print("Place Command Received")
+
+    grasp_pose = self.pick_command.grasp_pose.pose
+    place_pose = self.place_command.place_pose.pose
+
+    above_target = grasp_pose
+    above_target.position.z += 0.15
+    self.set_pose_goal_quat(above_target)
+    self.go_to_pose_goal()
+    return
 
 
 
-  def set_pose_goal(self,pose_goal_raw):
-      quat = quaternion_from_euler(pose_goal_raw[3], pose_goal_raw[4], pose_goal_raw[5])
-      self.pose_goal = geometry_msgs.msg.Pose()
-      self.pose_goal.position.x = pose_goal_raw[0]
-      self.pose_goal.position.y = pose_goal_raw[1]
-      self.pose_goal.position.z = pose_goal_raw[2]
-      self.pose_goal.orientation.x = quat[0]
-      self.pose_goal.orientation.y = quat[1]
-      self.pose_goal.orientation.z = quat[2]
-      self.pose_goal.orientation.w = quat[3]
+  def pose_euler2quaternion(self,pose_euler):
+      quat = quaternion_from_euler(pose_euler[3], pose_euler[4], pose_euler[5])
+      pose = geometry_msgs.msg.Pose()
+      pose.position.x = pose_euler[0]
+      pose.position.y = pose_euler[1]
+      pose.position.z = pose_euler[2]
+      pose.orientation.x = quat[0]
+      pose.orientation.y = quat[1]
+      pose.orientation.z = quat[2]
+      pose.orientation.w = quat[3]
+      return pose
 
+  def set_pose_goal(self,pose_euler):
+      pose_quat = self.pose_euler2quaternion(pose_euler)
+      self.pose_goal = pose_quat
+
+  def set_pose_goal_quat(self,pose_quat):
+      self.pose_goal = pose_quat
 
   def go_to_joint_goal(self):
     ## Planning to a Joint Goal
@@ -143,36 +170,37 @@ class Controller(object):
     current_pose = self.group.get_current_pose().pose
     return all_close(self.pose_goal, current_pose, 0.01)
 
+  def go_to_defined_pose(self, msg):
+      self.set_command_status(msg.command_id)
 
+      target_pose = msg.target_pose # pose_quat
 
-  def go_to_defined_pose(self, pose_goal_raw):
-
-      self.set_pose_goal(pose_goal_raw)
-
+      self.set_pose_goal_quat(target_pose)
       self.group.set_pose_target(self.pose_goal)
 
       success = self.go_to_pose_goal()
-
-      if success:
-          msg = ["go_to_defined_pose attempt",pose_goal_raw,'success']
-          send_socket_msg(msg,port=9989)
-      else:
-          msg = ["go_to_defined_pose attempt",pose_goal_raw,'fail']
-          send_socket_msg(msg,port=9989)
+      success = True
+      self.set_command_status(msg.command_id,completed=True,success=success)
 
       return success
 
-  def move_gripper(self, gripper_position):
-    # gripper: left_finger, right_finger
-    #self.group2.set_joint_value_target([0.018, -0.016]) #almost closed
-    #self.group2.set_joint_value_target([0.034, -0.034]) #almost totally open
+  def move_gripper(self, msg):
+    self.set_command_status(msg.command_id)
+
+    gripper_upper_limit = [0.03,0.03]
+    gripper_lower_limit = [0,0]
+
+    if msg.command == "open":
+      gripper_position = gripper_upper_limit
+    else:
+      gripper_position = gripper_lower_limit
+
     self.group2.set_joint_value_target(gripper_position)
     self.group2.go()
-    # plan = self.group2.plan()[1]
-    # self.group2.execute(plan, wait=True)
 
-    msg = ["move_gripper attempt",self.check_gripper_state()]
-    send_socket_msg(msg,port=9989)
+    success = True
+
+    self.set_command_status(msg.command_id,completed=True,success=success)
 
   def check_gripper_state(self,send_result=False):
     cur_gripper_position = self.group2.get_current_joint_values()
@@ -190,9 +218,7 @@ class Controller(object):
     else:
         result = 'semi_closed'
 
-    if send_result:
-        msg = ['check_gripper_state',result]
-        send_socket_msg(msg,port=9989)
+    return result
 
   def control_motor_angles(self, desired_angles):
     #robot: waist, shoulder, elbow, wrist_angle, wrist_rotate
@@ -202,8 +228,6 @@ class Controller(object):
     self.group.set_joint_value_target(desired_angles)
     plan = self.group.plan()[1]
     self.group.execute(plan, wait=True)
-    #print(self.group.get_current_state())
-
 
   def plan_cartesian_path(self, x_dir=1, z_dir=1):
     ## Cartesian Paths
@@ -250,6 +274,10 @@ class Controller(object):
     # Publish
     self.display_trajectory_publisher.publish(display_trajectory);
 
+  def set_command_status(self,command_id,completed=False,success=False):
+      rospy.set_param('/command/received',True)
+      rospy.set_param('/command/completed',completed)
+      rospy.set_param('/command/success',success)
 
 def send_socket_msg(Message,address="localhost",port=9988):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -259,35 +287,15 @@ def send_socket_msg(Message,address="localhost",port=9988):
     s.close()
 
 def main():
-
-    controller = Controller()
-
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(("localhost", 9988))
-
     while True:
-        try:
-            s.listen(1)
-            #s.settimeout(2)
-            conn, addr = s.accept()
-            data = conn.recv(1024)
-            data_arr = pickle.loads(data)
-            print("#########")
-            print(data_arr)
-            print("#########")
-            s.shutdown(1) # By convention, but not actually necessary
-            conn.close()
+      rospy.spin()
 
-            if data_arr[0]=="move_to_specified_pose":
-               controller.go_to_defined_pose(data_arr[1])
-            if data_arr[0]=="control_motor_angles":
-               controller.control_motor_angles(data_arr[1])
-            if data_arr[0]=="move_gripper":
-               controller.move_gripper(data_arr[1])
-            if data_arr[0]=="check_gripper_state":
-                controller.check_gripper_state(send_result=True)
-        except socket.error as socketerror:
-              print("Error: ", socketerror)
+controller = Controller()
+print(controller.robot_name,"=========================================================")
+# move_gripper_subscriber = rospy.Subscriber("/"+controller.robot_name+"/move_gripper_command", MoveGripperCommand, controller.move_gripper) 
+# go_to_pose_subsciber = rospy.Subscriber("/"+controller.robot_name+"/go_to_pose_command", GoToPoseCommand, controller.go_to_defined_pose)
+pick_command_subsciber = rospy.Subscriber("/"+controller.robot_name+"/pick_command", Grasp, controller.update_pick_command)
+place_command_subsciber = rospy.Subscriber("/"+controller.robot_name+"/place_command", PlaceLocation, controller.pick_and_place_routine)
 
 if __name__ == '__main__':
     main()

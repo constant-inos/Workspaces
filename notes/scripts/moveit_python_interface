@@ -348,7 +348,7 @@ place_command_subsciber = rospy.Subscriber("/"+controller.robot_name+"/place_com
 if __name__ == '__main__':
     time.sleep(3)
     # controller.move_base_cmd()
-    controller.set_camera_for_manipulation()
+    # controller.set_camera_for_manipulation()
     controller.go_to_named_pose('Sleep',group=controller.group)
     print(controller.robot_name)
 

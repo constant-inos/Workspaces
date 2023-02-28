@@ -1,11 +1,11 @@
-# **/build/
-# **/devel/
-# **/.catkin_workspace
+**/build/
+**/devel/
+**/.catkin_workspace
 
-# **/src/CMakeLists.txt
+**/src/CMakeLists.txt
 
-# **/src/*/CMakeLists.txt
-# **/src/*/package.xml
+**/src/*/CMakeLists.txt
+**/src/*/package.xml
 
 
 

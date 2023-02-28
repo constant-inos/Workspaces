@@ -1,0 +1,123 @@
+<launch>
+
+  <arg name="robot_model"                       default="wx200"/>
+  <arg name="robot_name"                        default="$(arg robot_model)"/>
+  <arg name="base_link_frame"                   default="base_link"/>
+  <arg name="use_world_frame"                   default="true"/>
+  <arg name="external_urdf_loc"                 default="$(find master)/extrernal_urdfs/camera_depth.xacro"/>
+  <!-- <arg name="external_urdf_loc"                 default=""/> -->
+  <arg name="external_srdf_loc"                 default=""/>
+  <arg name="mode_configs"                      default="$(find robotic_arm_moveit)/config/modes.yaml"/>
+  <arg name="use_moveit_rviz"                   default="true"/>
+  <arg name="rviz_frame"                        default="world"/>
+  <arg name="use_gazebo"                        default="true"/>
+  <arg name="use_actual"                        default="false"/>
+  <arg name="use_fake"                          default="false"/>
+  <arg name="world_name"                        default="$(find robotic_arm_gazebo)/worlds/xsarm_gazebo.world"/>
+  <arg name="use_cpp_interface"                 default="false"/>
+  <arg name="moveit_interface_gui"              default="false"/>
+  <arg name="use_python_interface"              default="true"/>
+
+  <arg name="moveit_launch"                     default="$(find robotic_arm_moveit)/launch/xsarm_moveit.launch"/>
+  <arg name="gazebo_launch"                     default="$(find robotic_arm_gazebo)/launch/xsarm_gazebo.launch"/>
+  <arg name="robot_description_launch"          default="$(find robotic_arm_descriptions)/launch/robotic_arm_description.launch"/>
+  <!-- <arg name="robot_ros_control_launch"          default="$(find robotic_arm_ros_control)/launch/robotic_arm_ros_control.launch"/> -->
+  <arg name="move_group_launch"                 default="$(find robotic_arm_moveit)/launch/move_group.launch"/>
+  <arg name="planning_context_launch"           default="$(find robotic_arm_moveit)/launch/planning_context.launch"/>
+  <arg name="planning_pipeline_launch"          default="$(find robotic_arm_moveit)/launch/planning_pipeline.launch.xml"/>
+  <arg name="trajectory_execution_launch"       default="$(find robotic_arm_moveit)/launch/trajectory_execution.launch.xml"/>
+  <arg name="robot_controller_manager_launch"   default="$(find robotic_arm_moveit)/launch/xsarm_moveit_controller_manager.launch.xml"/>
+  <arg name="sensor_manager_launch"             default="$(find robotic_arm_moveit)/launch/sensor_manager.launch.xml"/>
+  <arg name="robot_sensor_manager_launch"       default="$(find robotic_arm_moveit)/launch/xsarm_moveit_sensor_manager.launch.xml"/>
+  <arg name="moveit_rviz_launch"                default="$(find robotic_arm_moveit)/launch/moveit_rviz.launch"/>
+
+  <arg name="robot_trajectory_controllers_yaml" default="$(find robotic_arm_gazebo)/config/trajectory_controllers/$(arg robot_model)_trajectory_controllers.yaml"/>
+  <arg name="robot_position_controllers_yaml"   default="$(find robotic_arm_gazebo)/config/trajectory_controllers/$(arg robot_model)_trajectory_controllers.yaml"/>
+  <arg name="robot_urdf"                        default="$(find wx200_description)/urdf/$(arg robot_model).urdf.xacro"/>
+  <arg name="robot_rviz_description"            default="$(find wx200_description)/rviz/robotic_arm_description.rviz"/>
+  <arg name="gdb_settings"                      default="$(find robotic_arm_moveit)/launch/gdb_settings.gdb"/>
+  <arg name="robot_srdf"                        default="$(find wx200_moveit_config)/config/srdf/$(arg robot_model).srdf.xacro"/>
+  <arg name="robot_joint_limits_yaml"           default="$(find wx200_moveit_config)/config/joint_limits.yaml"/>
+  <arg name="kinematics_yaml"                   default="$(find wx200_moveit_config)/config/kinematics.yaml"/>
+  <arg name="robot_controllers"                 default="$(find wx200_moveit_config)/config/controllers/$(arg robot_model)_controllers.yaml"/>
+  <arg name="robot_fake_controllers"            default="$(find wx200_moveit_config)/config/fake_controllers/$(arg robot_model)_controllers.yaml"/>
+  <arg name="sensors_3d_yaml"                   default="$(find robotic_arm_moveit)/config/sensors_3d.yaml"/>
+  <arg name="robot_config_yaml"                 default="$(find master)/config/$(arg robot_model).yaml"/>
+
+
+  <include file="$(arg moveit_launch)">
+    <arg name="robot_model"                       value="$(arg robot_model)"/>
+    <arg name="robot_name"                        value="$(arg robot_name)"/>
+    <arg name="base_link_frame"                   value="$(arg base_link_frame)"/>
+    <arg name="use_world_frame"                   value="$(arg use_world_frame)"/>
+    <arg name="external_urdf_loc"                 value="$(arg external_urdf_loc)"/>
+    <arg name="external_srdf_loc"                 value="$(arg external_srdf_loc)"/>
+    <arg name="mode_configs"                      value="$(arg mode_configs)"/>
+    <arg name="use_moveit_rviz"                   value="$(arg use_moveit_rviz)"/>
+    <arg name="rviz_frame"                        value="$(arg rviz_frame)"/>
+    <arg name="use_gazebo"                        value="$(arg use_gazebo)"/>
+    <arg name="use_actual"                        value="$(arg use_actual)"/>
+    <arg name="use_fake"                          value="$(arg use_fake)"/>
+    <arg name="world_name"                        value="$(arg world_name)"/>
+
+    <arg name="moveit_launch"                     value="$(arg moveit_launch)"/>
+    <arg name="gazebo_launch"                     value="$(arg gazebo_launch)"/>
+    <arg name="robot_description_launch"          value="$(arg robot_description_launch)"/>
+    <!-- <arg name="robot_ros_control_launch"          value="$(arg robot_ros_control_launch)"/> -->
+    <arg name="move_group_launch"                 value="$(arg move_group_launch)"/>
+    <arg name="planning_context_launch"           value="$(arg planning_context_launch)"/>
+    <arg name="planning_pipeline_launch"          value="$(arg planning_pipeline_launch)"/>
+    <arg name="trajectory_execution_launch"       value="$(arg trajectory_execution_launch)"/>
+    <arg name="robot_controller_manager_launch"   value="$(arg robot_controller_manager_launch)"/>
+    <arg name="sensor_manager_launch"             value="$(arg sensor_manager_launch)"/>
+    <arg name="robot_sensor_manager_launch"       value="$(arg robot_sensor_manager_launch)"/>
+    <arg name="moveit_rviz_launch"                value="$(arg moveit_rviz_launch)"/>
+
+    <arg name="robot_trajectory_controllers_yaml" value="$(arg robot_trajectory_controllers_yaml)"/>
+    <arg name="robot_position_controllers_yaml"   value="$(arg robot_position_controllers_yaml)"/>
+    <arg name="robot_urdf"                        value="$(arg robot_urdf)"/>
+    <arg name="robot_rviz_description"            value="$(arg robot_rviz_description)"/>
+    <arg name="gdb_settings"                      value="$(arg gdb_settings)"/>
+    <arg name="robot_srdf"                        value="$(arg robot_srdf)"/>
+    <arg name="robot_joint_limits_yaml"           value="$(arg robot_joint_limits_yaml)"/>
+    <arg name="kinematics_yaml"                   value="$(arg kinematics_yaml)"/>
+    <arg name="robot_controllers"                 value="$(arg robot_controllers)"/>
+    <arg name="robot_fake_controllers"            value="$(arg robot_fake_controllers)"/>
+    <arg name="sensors_3d_yaml"                   value="$(arg sensors_3d_yaml)"/>
+    <arg name="robot_config_yaml"                 value="$(arg robot_config_yaml)"/>
+
+  </include>
+
+  <group if="$(arg use_cpp_interface)">
+
+    <node
+      name="moveit_interface"
+      pkg="robotic_arm_moveit_interface"
+      type="moveit_interface"
+      respawn="false"
+      output="screen"
+      ns="$(arg robot_name)"/>
+
+    <node if="$(arg moveit_interface_gui)"
+      name="moveit_interface_gui"
+      pkg="robotic_arm_moveit_interface"
+      type="moveit_interface_gui"
+      output="screen"
+      ns="$(arg robot_name)"/>
+
+  </group>
+
+  <node if="$(arg use_python_interface)"
+    name="moveit_python_interface"
+    pkg="robotic_arm_moveit_interface"
+    type="moveit_python_interface"
+    respawn="false"
+    output="screen"
+    ns="$(arg robot_name)">
+    <rosparam command="load"                      file="$(find master)/config/$(arg robot_model).yaml"/>
+    <param name="robot_model"                     value="$(arg robot_model)"/>
+    <remap from="/attached_collision_object"      to="/$(arg robot_name)/attached_collision_object"/>
+    <remap from="/collision_object"               to="/$(arg robot_name)/collision_object"/>
+  </node>
+
+</launch>
