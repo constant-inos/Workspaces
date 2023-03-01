@@ -186,7 +186,7 @@ class Master:
             if is_red(r,g,b): 
                 color = 'Red'
                 place_pose_euler = red_bucket
-            if is_green(r,g,b): 
+            elif is_green(r,g,b): 
                 color = 'Green'
                 place_pose_euler = green_bucket
             
@@ -194,8 +194,9 @@ class Master:
 
             if color == 'Unrecognised': continue
             
-            master.publish_pick_command(grab_pose_euler,obj_id=i)
-            master.publish_place_command(place_pose_euler,obj_id=i)
+            obj_id = str(round(x,2)).replace('.','')+str(round(y,2)).replace('.','')
+            master.publish_pick_command(grab_pose_euler,obj_id=obj_id)
+            master.publish_place_command(place_pose_euler,obj_id=obj_id)
             print("Published Object's details.")
 
         # rospy.sleep(10)
@@ -495,7 +496,6 @@ def is_red(r,g,b):
     c2 = (h>170 and h<180) and (s>200) and (v>50)
     
     return (c1 or c2)
-    return c1
 
 def is_green(r,g,b):
     if r>1.0 or g>1.0 or b>1.0:
@@ -641,7 +641,7 @@ def main():
     while True:
         rospy.init_node('robot_state_publisher') #this is an existing topic
         print("Listening to camera topic ...")
-        x = 5/8.0+6.2356
+        rospy.sleep(5)
         rospy.spin()
 
     # x0, y0,z0 ,_ ,_ ,_ = master.base_frame
