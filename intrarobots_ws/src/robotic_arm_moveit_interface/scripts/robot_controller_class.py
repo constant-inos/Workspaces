@@ -24,14 +24,17 @@ from sklearn.cluster import DBSCAN
 import time 
 from scipy.spatial.transform import Rotation
 import copy
+import ros_numpy
+import message_filters
+import os 
+
+from ultralytics import YOLO
+
+weights = 'yolov8n.pt'
+model = YOLO(weights)
 
 bridge = CvBridge()
-exev_status_code = 0
-exev_status_text = ''
 ROBOT_NAME = 'wx200'
-
-# go_to_pose_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/go_to_pose_command",GoToPoseCommand,queue_size=1)
-# move_gripper_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/move_gripper_command",MoveGripperCommand,queue_size=1)
 
 pick_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/pick_command",Grasp,queue_size=1)
 place_command_publisher = rospy.Publisher("/"+ROBOT_NAME+"/place_command",PlaceLocation,queue_size=1)
@@ -43,16 +46,12 @@ class Master:
         self.base_frame = (0, 0, 0, 0, 0, 0)
         # self.camera_frame = (0.078643,0.017516,0.487583,-0.000022,0.700871,0.000226)
         self.camera_frame = (0,0,0.6,0,np.pi/4,0)
-        self.seq = 0
-        self.ptc1 = -1
-        self.ptc2 = -1
-        self.ptc = -1
-        self.transformation = np.eye(4)
-        self.i1 = 0
-        self.i2 = 0
-        self.f = 0
+        self.IMG_WIDTH = 640
+        self.IMG_HEIGHT = 480
+        self.img = None
 
     def transform(self,ptc1):
+        print("Point Cloud transformation to robot frame...")
         T = np.eye(4)
         T[:3, :3] = ptc1.get_rotation_matrix_from_xyz((np.pi/4, 0, 0))
         ptc1.transform(T)
@@ -119,42 +118,107 @@ class Master:
         
         return ptc
 
-    def read_camera1(self,msg):
+    def inference(self,img):
+        """
+        Inference of collected image in pretrained model.
+        Returns a list containing list with box coordinates and class of detected objects
+        """
+        (X0,Y0) = img.shape[:2]
+        detected_objects = []
 
-        self.i1 += 1
-        ptc1,reds,greens = self.pt2_to_o3d(msg,scan_by_color=True)
-        self.ptc1 = ptc1
-        print("Camera 1 readings:",self.i1,", Camera 2 readings:",self.i2)
+        ## For testing with red and green cubes
+        centers = get_objects_position(img)
+        for center in centers:
+            coords = center[0]
+            y1 = int(max(coords[0]-30,0))
+            y2 = int(min(coords[0]+30,self.IMG_HEIGHT ))
+            x1 = int(max(coords[1]-30,0))
+            x2 = int(min(coords[1]+30,self.IMG_WIDTH))
+            # y1 = int(coords[0]-30)
+            # y2 = int(coords[0]+30)
+            # x1 = int(coords[1]-30)
+            # x2 = int(coords[1]+30)
+            obj_class = center[1]
+            detected_objects.append( [x1,y1,x2,y2,obj_class])
+            cv2.rectangle(img, (x1,y1), (x2,y2), (255, 0, 0), 2)
+        ##
 
-    def read_camera2(self,msg):
-        self.i2 += 1
-        ptc2,reds,greens = self.pt2_to_o3d(msg,scan_by_color=True)
-        self.ptc2 = ptc2
+        
 
-        if self.i1 > 1 and self.i2 > 1:
-            print("Syka Blyat")
-            comb_ptc = self.combine_ptcs(self.ptc1,self.ptc2)
-            print("Syka Blyat 2")
-            # self.get_red_objects(comb_ptc)
-            o = self.cluster_objects_3d(comb_ptc)
-            o = [ob.paint_uniform_color([random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1)]) for ob in o]
+        objects = []
+        t0 = time.time()
+        pred = model.predict(img)
+        n_boxes = len(pred[0].boxes)
+        [X,Y] = [int(x) for x in pred[0].boxes.orig_shape]
 
-            for oi in o:
-                pt = list(oi.points)
-                c = pt[int(len(pt)//2)]
-                print("Centroid of Object",c)
+        for i in range(n_boxes):
+            box = pred[0].boxes[i]
+            conf = float(box.conf)
+            [x1,y1,x2,y2] = [int(x) for x in box.xyxy[0]]
+            det_class = int(box.cls)
+            x1,x2,y1,y2 = int(x1/X*X0),int(x2/X*X0),int(y1/Y*Y0),int(y2/Y*Y0)
+            img1 = cv2.rectangle(img, (x1,y1), (x2,y2), (255, 0, 0), 2)
+            detected_objects.append([x1,y1,x2,y2,model.names[int(det_class)]])
 
-            # open3d.visualization.draw_geometries(o)
-            # self.convex_hull(o[1])
+        for det in detected_objects:
+            
+            [x1,y1,x2,y2,cl] = det
+            print(cl)
+            position = (x1,y1)
+            cv2.putText(
+                img, #numpy array on which text is written
+                cl, #text
+                position, #position at which writing has to start
+                cv2.FONT_HERSHEY_SIMPLEX, #font family
+                1, #font size
+                (209, 80, 0, 255), #font color
+                1) #font stroke
+            # cv2.imwrite('output.png', img)
+        
+        cv2.imshow('Image',img)
+        cv2.waitKey(3)
+        
+        return detected_objects
 
-            # open3d.visualization.draw_geometries([a,b])
-            # self.get_gripper_orientation(o[1])
-            print(" ")
+    def read_img_and_ptc(self,img_msg,ptc_msg,display_image=False):
+        """
+        Time Synchronized Callback for two different subscribers
+        """
+
+        print("Reading Depth Camera...")
+
+        cv_image = bridge.imgmsg_to_cv2(img_msg, desired_encoding='bgr8')
+        if display_image:
+            cv2.imshow('Image',cv_image)
+            cv2.waitKey() # milliseconds
+        
+        object_boxes = self.inference(cv_image)
+        
+        
+
+        ptc = self.pt2_to_o3d(ptc_msg)
+
+        for box in object_boxes:
+            [x1,y1,x2,y2,obj_class] = box
+            if obj_class not in ['red','green']: continue
+            ptc_segment = self.img_crop2ptc_segment(x1,y1,x2,y2,ptc)
+            
+            self.ptc2objects(ptc_segment)
+        
 
     def read_ptc(self,msg):
-        print("Reading Point Cloud...")
-        ptc = self.pt2_to_o3d(msg,scan_by_color=False)
-        print("Point Cloud transformation to robot frame...")
+        # print("Reading Point Cloud...")
+
+        ptc = self.pt2_to_o3d(msg)
+        
+        self.ptc2objects(ptc)
+
+        # segment = self.img_crop2ptc_segment(150,150,300,300,ptc)
+        # open3d.visualization.draw_geometries([segment])
+        # return
+    
+    def ptc2objects(self,ptc):
+        
         ptc = self.transform(ptc)
 
         print("Cropping region of interest...")
@@ -173,17 +237,19 @@ class Master:
 
         theta = get_gripper_angle(-0.35,-0.35,x0,y0)
         green_bucket = (-0.35,-0.35,0.3,0,0,theta)
-            
-        for i,o in enumerate(objects):           
+
+        for i,o in enumerate(objects):
             r = np.array(o.points)
             x,y,z = np.mean(r[:,0]),np.mean(r[:,1]),np.mean(r[:,2])
             theta = get_gripper_angle(x,y,x0,y0)
-            grab_pose_euler = (x,y,z,0,0,theta)
+            # grab_pose_euler = (x,y,z,0,np.pi/4,theta)
+
+            grab_pose_euler = (x,y,z,np.pi/2,np.pi/2.01,theta)
 
             c = np.array(o.colors)
             r,g,b = np.mean(c[:,0]),np.mean(c[:,1]),np.mean(c[:,2])
             color = 'Unrecognised'
-            if is_red(r,g,b): 
+            if is_red(r,g,b):
                 color = 'Red'
                 place_pose_euler = red_bucket
             elif is_green(r,g,b): 
@@ -199,12 +265,36 @@ class Master:
             master.publish_place_command(place_pose_euler,obj_id=obj_id)
             print("Published Object's details.")
 
-        # rospy.sleep(10)
+            # min_bbox = open3d.geometry.OrientedBoundingBox.get_minimal_oriented_bounding_box(o)
+   
+
+
+            # min_bbox = o.get_axis_aligned_bounding_box()
+            # min_bbox = o.get_oriented_bounding_box()
+            # min_bbox = o.get_minimal_oriented_bounding_box() # nope
+            # bpoints = min_bbox.get_box_points()
+            # print(np.asarray(bpoints))
+            # open3d.visualization.draw_geometries([o,min_bbox])
 
         # mesh_frame = open3d.geometry.TriangleMesh.create_coordinate_frame(size=0.6, origin=[0,0,0])
-        # open3d.visualization.draw_geometries([reds,mesh_frame])
         # open3d.visualization.draw_geometries([ptc,mesh_frame])
         return 
+
+    def read_camera(self,msg,display_image=False):
+
+        cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        self.img = cv_image
+
+        print("Captured image.")
+        print(f"Image shape: {cv_image.shape}")
+        
+        # cv_image = rotate_image(cv_image, 180)
+        # cv_image = cv_image[140:270, 160:320]
+        # cv_image = inference(cv_image)
+
+        if display_image:
+            cv2.imshow('Image',cv_image)
+            cv2.waitKey(5) # milLiseconds
 
     def get_gripper_orientation(self,object_points):
         object_points.estimate_normals()
@@ -245,6 +335,8 @@ class Master:
 
     def pt2_to_o3d(self,msg,scan_by_color=False):
         t0 = time.time()
+        H = msg.height # 480
+        W = msg.width # 640
 
         FIELDS_XYZ = [
             PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
@@ -268,10 +360,9 @@ class Master:
         green_objects_points = []
         green_objects_colors = []
 
-        for p in points:
+        for i,p in enumerate(points):
             x,y,z,b,g,r = p      
             # x,y,z,r,g,b = p      
-            # print(z)
             xyz.append((x,y,z))
             rgb.append((r,g,b))
 
@@ -313,10 +404,13 @@ class Master:
             return open3d_cloud
 
     def cluster_objects_3d(self,point_cloud):
-        # input: point cloud
-        # output: list of cluster of point clouds
+        """
+        input: point cloud
+        output: list of point clouds (clusters of points representing objects)
+        """
+        if len(list(point_cloud.points)) < 3: return []
 
-        cluster_ind = np.array( point_cloud.cluster_dbscan(eps=0.01,min_points=4) )
+        cluster_ind = np.array( point_cloud.cluster_dbscan(eps=0.02,min_points=4) )
         num_clusters = cluster_ind.max() + 1
         all_points = np.array(point_cloud.points)
         all_colors = np.array(point_cloud.colors)
@@ -348,6 +442,34 @@ class Master:
         
         return clusters
 
+    def img_crop2ptc_segment(self,r0,c0,r1,c1,ptc):
+        """
+        get point cloud segment corresponding to image box (r0,c0),(r1,c1)
+        """
+        # r0,c0,r1,c1 = int(r0),int(c0),int(r1),int(c1)
+        c0,r0,c1,r1 = int(r0),int(c0),int(r1),int(c1)
+
+        ptc_segment = open3d.geometry.PointCloud()
+        segment_points = []
+        segment_colors = []
+
+        ptc_points = np.array(ptc.points)
+        ptc_colors = np.array(ptc.colors)
+        print(ptc_points.shape)
+        print(ptc_points[0])
+
+        for r in range(r0,r1-1):
+            for c in range(c0,c1-1):
+                index = r*self.IMG_WIDTH+1 + c
+                segment_points.append((ptc_points[index]))
+                segment_colors.append((ptc_colors[index]))
+
+        ptc_segment.points = open3d.utility.Vector3dVector(np.array(segment_points))
+        ptc_segment.colors = open3d.utility.Vector3dVector(np.array(segment_colors))
+
+
+        return ptc_segment
+
     def publish_pick_command(self,pick_pose,obj_id=0):
         pose = create_pose_msg(pick_pose)
         pose_stamped = PoseStamped()
@@ -355,8 +477,6 @@ class Master:
         
         header = Header()
         header.frame_id = str(self.robot_name) + '_' + str(obj_id)
-        header.seq = self.seq
-        self.seq += 1
         now = rospy.get_rostime()
         header.stamp.secs = now.secs
         header.stamp.nsecs = now.nsecs
@@ -365,6 +485,7 @@ class Master:
         grasp_msg = Grasp()
         grasp_msg.id = str(self.robot_name) + '_' + str(obj_id)
         grasp_msg.grasp_pose = pose_stamped
+
         pick_command_publisher.publish(grasp_msg)
 
     def publish_place_command(self,place_pose,obj_id=0):
@@ -374,8 +495,6 @@ class Master:
         
         header = Header()
         header.frame_id = str(self.robot_name) + '_' + str(obj_id)
-        header.seq = self.seq
-        self.seq += 1
         now = rospy.get_rostime()
         header.stamp.secs = now.secs
         header.stamp.nsecs = now.nsecs
@@ -567,68 +686,8 @@ def get_gripper_angle(x,y,x0,y0):
         theta = np.arctan((y-y0)/(x-x0))
     return theta
 
-def execution_status(msg):
-    global exev_status_text, exec_status_code
-    exev_status_text, exec_status_code = msg.status.text, msg.status.status
-    print('exec_status')
-    return exev_status_text, exec_status_code
 
-def read_point_cloud2(msg):
-    height = msg.height # how many rows in the data
-    width = msg.width # how many points in a row
-    point_step = msg.point_step # how many bytes in a point
-    row_step = msg.row_step # how many bytes in a row
-    data = msg.data
-    is_bigendian = msg.is_bigendian
 
-    image = np.zeros((height,width,3))
-    i = 0
-
-    for row in range(height):
-        for point in range(width):
-            offset = row * row_step + point * point_step
-
-            x_bytes = data[offset:offset+4]
-            x = struct.unpack('f',x_bytes)
-
-            y_bytes = data[offset+4:offset+8]
-            y = struct.unpack('f',y_bytes)
-            
-            z_bytes = data[offset+8:offset+16]
-            z = struct.unpack('ff',z_bytes)
-
-            b_bytes = data[offset+16:offset+17]
-            b = struct.unpack('B',b_bytes)
-            b = int(b[0])
-            
-            g_bytes = data[offset+17:offset+18]
-            g = struct.unpack('B',g_bytes)
-            g = int(g[0])
-
-            r_bytes = data[offset+18:offset+19]
-            r = struct.unpack('B',r_bytes)
-            r = int(r[0]) 
-
-            image[row,point,0] = b
-            image[row,point,1] = g
-            image[row,point,2] = r
-            # print(b,g,r)
-            i +=1
-    return image
-
-def get_point_cloud(msg):
-
-    # image = read_point_cloud2(msg)
-    o3d_cloud = pt2_to_o3d(msg,scan_by_color=True)
-    # open3d.visualization.draw_geometries([reds,greens])
-    return
-    
-    image = image.astype(np.uint8)
-    objects = get_objects_position(image)
-
-    for o in objects:
-        print(o)
-        success = get_object(o[0],o[1])
 
 from moveit_msgs.msg import MoveGroupActionResult
 from actionlib_msgs.msg import GoalStatus
@@ -639,35 +698,37 @@ master = Master()
 def main():
     
     while True:
-        rospy.init_node('robot_state_publisher') #this is an existing topic
         print("Listening to camera topic ...")
         rospy.sleep(5)
         rospy.spin()
 
-    # x0, y0,z0 ,_ ,_ ,_ = master.base_frame
-    #  # Arm's base position relative to (0,0,0)
-    # x,y,z = 0.6,0.1,0.31
-    # theta = get_gripper_angle(x,y,x0,y0)
-    # pose_euler = (x,y,z,0,0,theta)
-    # print("Pyblished Pose:",pose_euler)
 
-    # print(1)
-    # master.publish_pick_command(pose_euler)
-    # print(2)
-    # master.publish_place_command(pose_euler)
-    # print(3)
-    # rospy.spin()
+def test_pick():
+    x0, y0,z0 ,_ ,_ ,_ = master.base_frame # Arm's base position relative to (0,0,0)
+    x,y,z = 0.3,0.1,0.25
+    theta = get_gripper_angle(x,y,x0,y0)
+    grab_pose_euler = (x,y,z,0,np.pi/4,theta)
+
+    master.publish_pick_command(grab_pose_euler)
+    master.publish_place_command(grab_pose_euler)
+    rospy.spin()
 
 COLOR_IMAGE_TOPIC = '/camera/color/image_raw'
-POINT_CLOUD_TOPIC1 = '/locobot/camera/depth_registered/points'
-POINT_CLOUD_TOPIC2 = '/camera/depth/points'
+POINT_CLOUD_TOPIC2 = '/locobot/camera/depth_registered/points'
+POINT_CLOUD_TOPIC = '/camera/depth/points'
 
-point_cloud_subscriber1 = rospy.Subscriber(POINT_CLOUD_TOPIC2, PointCloud2, master.read_ptc)
-# point_cloud_subscriber2 = rospy.Subscriber(POINT_CLOUD_TOPIC2, PointCloud2, master.read_camera2)
+# point_cloud_subscriber1 = rospy.Subscriber(POINT_CLOUD_TOPIC2, PointCloud2, master.read_ptc)
+# robot_camera_subscriber = rospy.Subscriber(COLOR_IMAGE_TOPIC, Image, master.read_camera) # Camera sensor, Image is the data type sensor_msgs/Image
 
-# sub = rospy.Subscriber(COLOR_IMAGE_TOPIC, Image, read_camera) # Camera sensor, Image is the data type sensor_msgs/Image
-# sub2 = rospy.Subscriber("/"+ROBOT_NAME+"/move_group/result", MoveGroupActionResult, execution_status)
+rospy.init_node('robot_state_publisher')
+camera_subscriber = message_filters.Subscriber(COLOR_IMAGE_TOPIC, Image)
+pointcloud2_subscriber = message_filters.Subscriber(POINT_CLOUD_TOPIC, PointCloud2)
+
+ts = message_filters.TimeSynchronizer([camera_subscriber,pointcloud2_subscriber],1)
+ts.registerCallback(master.read_img_and_ptc)
+
 
 if __name__ == "__main__":
+    # test_pick()
     main()
     
