@@ -27,6 +27,25 @@ import socket, pickle
 import actionlib 
 # from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
+"""
+Notes to implement:
+
+thread1: add target_shape,target_grasp, target_place to lists
+  group.pick(target_id,grasps)
+
+thread2: loop: plan,pick,place (until list is empty)
+  TimeSynchronizedSubs(grasp,place)
+
+robot_controller_class.py: get_objects, make_grasps
+
+https://python.hotexamples.com/examples/moveit_commander/MoveGroupCommander/pick/python-movegroupcommander-pick-method-examples.html
+http://docs.ros.org/en/noetic/api/moveit_commander/html/classmoveit__commander_1_1planning__scene__interface_1_1PlanningSceneInterface.html#ada531d467a25c5e5b6f18f4245dd4aca
+group.pick:
+https://github.com/ros-planning/moveit/blob/master/moveit_commander/src/moveit_commander/move_group.py
+Deep Grasp
+https://moveit.ros.org/deep%20learning/grasping/moveit/3d%20perception/2020/09/28/grasp-deep-learning.html
+
+"""
 
 def all_close(goal, actual, tolerance):
   """
